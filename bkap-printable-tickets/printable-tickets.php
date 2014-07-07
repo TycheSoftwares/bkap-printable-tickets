@@ -3,7 +3,7 @@
 Plugin Name: Printable Ticket Addon for WooCommerce Booking & Appointment Plugin
 Plugin URI: http://www.tychesoftwares.com/store/premium-plugins/bkap-printable-ticket
 Description: This addon to the Woocommerce Booking and Appointment Plugin allows you to email the tickets for the bookings to customers when an order is placed.
-Version: 1.0
+Version: 1.1
 Author: Ashok Rane
 Author URI: http://www.tychesoftwares.com/
 */
@@ -14,13 +14,13 @@ $ExampleUpdateChecker = new PluginUpdateChecker(
 	__FILE__
 );*/
 global $PrintTicketUpdateChecker;
-$PrintTickerUpdateChecker = '1.0';
+$PrintTickerUpdateChecker = '1.1';
 
 // this is the URL our updater / license checker pings. This should be the URL of the site with EDD installed
 define( 'EDD_SL_STORE_URL_PRINT_TICKET_BOOK', 'http://www.tychesoftwares.com/' ); // IMPORTANT: change the name of this constant to something unique to prevent conflicts with other plugins using this system
 
 // the name of your product. This is the title of your product in EDD and should match the download title in EDD exactly
-define( 'EDD_SL_ITEM_NAME_PRINT_TICKET_BOOK', 'Woocommerce Printable Tickets Addon' ); // IMPORTANT: change the name of this constant to something unique to prevent conflicts with other plugins using this system
+define( 'EDD_SL_ITEM_NAME_PRINT_TICKET_BOOK', 'Printable Tickets Addon for WooCommerce Booking & Appointment Plugin' ); // IMPORTANT: change the name of this constant to something unique to prevent conflicts with other plugins using this system
 
 if( !class_exists( 'EDD_PRINT_TICKET_BOOK_Plugin_Updater' ) ) {
 	// load our custom updater if it doesn't already exist
@@ -32,7 +32,7 @@ $license_key = trim( get_option( 'edd_sample_license_key_print_ticket_book' ) );
 
 // setup the updater
 $edd_updater = new EDD_PRINT_TICKET_BOOK_Plugin_Updater( EDD_SL_STORE_URL_PRINT_TICKET_BOOK, __FILE__, array(
-		'version' 	=> '1.0', 		// current version number
+		'version' 	=> '1.1', 		// current version number
 		'license' 	=> $license_key, 	// license key (used get_option above to retrieve from DB)
 		'item_name' => EDD_SL_ITEM_NAME_PRINT_TICKET_BOOK, 	// name of this plugin
 		'author' 	=> 'Ashok Rane'  // author of this plugin
@@ -80,17 +80,19 @@ function woocommerce_booking_meta_delete()
 				add_filter('bkap_send_ticket', array(&$this, 'bkap_send_ticket_content'), 10, 2);
 				add_action('bkap_send_email', array(&$this,'bkap_send_ticket_email'),10,1);
 				add_filter('bkap_view_bookings', array(&$this,'bkap_view_bookings_fields'),10,3);
+				add_action('woocommerce_order_status_completed' , array(&$this,'woocommerce_complete_order'),10,1);
 				add_action('bkap_add_submenu',array(&$this, 'printable_ticket_menu'));
 				
-				add_action('admin_init', array(&$this, 'edd_sample_register_option'));
-				add_action('admin_init', array(&$this, 'edd_sample_deactivate_license'));
-				add_action('admin_init', array(&$this, 'edd_sample_activate_license'));
+				add_action('admin_init', array(&$this, 'edd_sample_register_option_print_ticket'));
+				add_action('admin_init', array(&$this, 'edd_sample_deactivate_license_print_ticket'));
+				add_action('admin_init', array(&$this, 'edd_sample_activate_license_print_ticket'));
 			}
-			function edd_sample_activate_license() 
+			function edd_sample_activate_license_print_ticket() 
 			{
 				// listen for our activate button to be clicked
-				if( isset( $_POST['edd_license_activate'] ) )
+				if( isset( $_POST['edd_print_ticket_license_activate'] ) )
 				{
+					//exit;
 					// run a quick security check
 					if( ! check_admin_referer( 'edd_sample_nonce', 'edd_sample_nonce' ) )
 						return; // get out if we didn't click the Activate button
@@ -107,14 +109,14 @@ function woocommerce_booking_meta_delete()
 						
 					// Call the custom API.
 					$response = wp_remote_get( add_query_arg( $api_params, EDD_SL_STORE_URL_PRINT_TICKET_BOOK ), array( 'timeout' => 15, 'sslverify' => false ) );
-						
+						//print_r($response);exit;
 					// make sure the response came back okay
 					if ( is_wp_error( $response ) )
 						return false;
 						
 					// decode the license data
 					$license_data = json_decode( wp_remote_retrieve_body( $response ) );
-						
+					//print_r($license_data);exit;	
 					// $license_data->license will be either "active" or "inactive"
 						
 					update_option( 'edd_sample_license_status_print_ticket_book', $license_data->license );
@@ -126,10 +128,10 @@ function woocommerce_booking_meta_delete()
 			* This will descrease the site count
 			***********************************************/
 				
-			function edd_sample_deactivate_license()
+			function edd_sample_deactivate_license_print_ticket()
 			{
 				// listen for our activate button to be clicked
-				if( isset( $_POST['edd_license_deactivate'] ) ) 
+				if( isset( $_POST['edd_print_ticket_license_deactivate'] ) ) 
 				{
 					// run a quick security check
 					if( ! check_admin_referer( 'edd_sample_nonce', 'edd_sample_nonce' ) )
@@ -170,7 +172,7 @@ function woocommerce_booking_meta_delete()
 			* want to do something custom
 			*************************************/
 				
-			function edd_sample_check_license() 
+			function edd_sample_check_license_print_ticket() 
 			{
 				global $wp_version;
 					
@@ -200,14 +202,14 @@ function woocommerce_booking_meta_delete()
 				}
 			}	
 			
-			function edd_sample_register_option() 
+			function edd_sample_register_option_print_ticket() 
 			{
 				// creates our settings in the options table
-				register_setting('edd_sample_license', 'edd_sample_license_key_print_ticket_book', array(&$this, 'edd_sanitize_license' ));
+				register_setting('edd_print_ticket_license', 'edd_sample_license_key_print_ticket_book', array(&$this, 'edd_sanitize_license_print_ticket' ));
 			}
 				
 				
-			function edd_sanitize_license( $new ) 
+			function edd_sanitize_license_print_ticket( $new ) 
 			{
 				$old = get_option( 'edd_sample_license_key_print_ticket_book' );
 				if( $old && $old != $new ) {
@@ -216,7 +218,7 @@ function woocommerce_booking_meta_delete()
 				return $new;
 			}
 				
-			function edd_sample_license_page() 
+			function edd_sample_license_page_print_ticket() 
 			{
 				$license 	= get_option( 'edd_sample_license_key_print_ticket_book' );
 				$status 	= get_option( 'edd_sample_license_status_print_ticket_book' );
@@ -226,7 +228,7 @@ function woocommerce_booking_meta_delete()
 											<h2><?php _e('Plugin License Options'); ?></h2>
 											<form method="post" action="options.php">
 											
-												<?php settings_fields('edd_sample_license'); ?>
+												<?php settings_fields('edd_print_ticket_license'); ?>
 												
 												<table class="form-table">
 													<tbody>
@@ -248,10 +250,10 @@ function woocommerce_booking_meta_delete()
 																	<?php if( $status !== false && $status == 'valid' ) { ?>
 																		<span style="color:green;"><?php _e('active'); ?></span>
 																		<?php wp_nonce_field( 'edd_sample_nonce', 'edd_sample_nonce' ); ?>
-																		<input type="submit" class="button-secondary" name="edd_license_deactivate" value="<?php _e('Deactivate License'); ?>"/>
+																		<input type="submit" class="button-secondary" name="edd_print_ticket_license_deactivate" value="<?php _e('Deactivate License'); ?>"/>
 																	<?php } else {
 																		wp_nonce_field( 'edd_sample_nonce', 'edd_sample_nonce' ); ?>
-																		<input type="submit" class="button-secondary" name="edd_license_activate" value="<?php _e('Activate License'); ?>"/>
+																		<input type="submit" class="button-secondary" name="edd_print_ticket_license_activate" value="<?php _e('Activate License'); ?>"/>
 																	<?php } ?>
 																</td>
 															</tr>
@@ -266,7 +268,7 @@ function woocommerce_booking_meta_delete()
 			
 					function printable_ticket_menu()
 					{
-						$page = add_submenu_page('booking_settings', __( 'Activate Printable Ticket License', 'woocommerce-booking' ), __( 'Activate Printable Ticket License', 'woocommerce-booking' ), 'manage_woocommerce', 'print_ticket_license_page', array(&$this, 'edd_sample_license_page' ));
+						$page = add_submenu_page('booking_settings', __( 'Activate Printable Ticket License', 'woocommerce-booking' ), __( 'Activate Printable Ticket License', 'woocommerce-booking' ), 'manage_woocommerce', 'print_ticket_license_page', array(&$this, 'edd_sample_license_page_print_ticket' ));
 					}
 									
 			function printable_ticket_activate()
@@ -499,53 +501,63 @@ return $rand_value;
 					$booking_settings = get_post_meta( $values['product_id'], 'woocommerce_booking_settings', true);
 					if(isset($saved_settings->booking_printable_ticket) && $saved_settings->booking_printable_ticket == 'on')
 					{
-						//print_r($values);
-						//print_r($order);exit;
-						$_product = $values['data'];
-						$product_name = $_product->get_title();
-						$from_email = get_option('admin_email');
-						$buyers_firstname = $order->order_custom_fields['_billing_first_name'][0];
-						$buyers_lastname = $order->order_custom_fields['_billing_last_name'][0];
-						$to = $order->order_custom_fields['_billing_email'][0];
-						$post_id = $values['product_id'];
-						$headers[] = "From:".$from_email;
-						$headers[] = "Content-type: text/html";
-						$completed_date = date('F j, Y',strtotime($order->completed_date));
-						$subject = "Your Ticket for Order #".$order->id." from ".$completed_date;
-						//echo $subject;exit;
-						$addons = $values['addons'];
-						$logo = get_header_image();
-						$message = '';
-						$booking = '';
-						$addon = '';
-						$site_url = get_site_url();
-						$site_title = get_option('blogname');
-						$site_tagline = get_option('blogdescription'); 
-						if(array_key_exists('booking',$values) )
+						if(isset($booking_settings['booking_enable_date']) && $booking_settings['booking_enable_date'] == 'on')
 						{
-							$bookings = $values['booking'];
+							//print_r($values);exit;
+							//print_r($order);exit;
+							if(array_key_exists('data',$values) )
+							{
+								$_product = $values['data'];
+								$product_name = $_product->get_title();
+							}
+							else
+							{
+								$product_name = $values['name'];
+							}
+							$from_email = get_option('admin_email');
+							$buyers_firstname = $order->billing_first_name;
+							$buyers_lastname = $order->billing_last_name;
+							$to = $order->billing_email;
+							$post_id = $values['product_id'];
+							$headers[] = "From:".$from_email;
+							$headers[] = "Content-type: text/html";
+							$completed_date = date('F j, Y',strtotime($order->completed_date));
+							$subject = "Your Ticket for Order #".$order->id." from ".$completed_date;
+							//echo $subject;exit;
 							
-							if (array_key_exists('date',$bookings[0]) && $bookings[0]['date'] != "")
+							
+							$logo = get_header_image();
+							$message = '';
+							$booking = '';
+							$addon = '';
+							$site_url = get_site_url();
+							$site_title = get_option('blogname');
+							$site_tagline = get_option('blogdescription'); 
+							if(array_key_exists('booking',$values) )
 							{
-								$booking_date = date('d F, Y',strtotime($bookings[0]["hidden_date"]));
-								$booking = get_option("book.item-meta-date").': '.$booking_date.'<br>';
-							}
-							if (array_key_exists('date_checkout',$bookings[0]) && $bookings[0]['date_checkout'] != "")
-							{
-								$booking_date_checkout = date('d F, Y',strtotime($bookings[0]["hidden_date_checkout"]));
-								$booking .= get_option("checkout.item-meta-date").': '.$booking_date_checkout.'<br>';
-							}
-							if (array_key_exists('time_slot',$bookings[0]) && $bookings[0]['time_slot'] != "")
-							{
-								$booking .= get_option("book.item-meta-time").': '. $bookings[0]["time_slot"].'<br>';
-							}
-							$hidden_date = $bookings[0]['hidden_date'];
-							$date_query = date('Y-m-d', strtotime($hidden_date));
-							if ($bookings[0]['date_checkout'] != "")
-							{
-								$date_checkout = $bookings[0]['hidden_date_checkout'];
-								$date_checkout_query = date('Y-m-d',strtotime($date_checkout));
-								$booking_query = "SELECT id FROM `".$wpdb->prefix."booking_history`
+								$bookings = $values['booking'];
+										
+								if (array_key_exists('date',$bookings[0]) && $bookings[0]['date'] != "")
+								{
+									$booking_date = date('d F, Y',strtotime($bookings[0]["hidden_date"]));
+									$booking = get_option("book.item-meta-date").': '.$booking_date.'<br>';
+								}
+								if (array_key_exists('date_checkout',$bookings[0]) && $bookings[0]['date_checkout'] != "")
+								{
+									$booking_date_checkout = date('d F, Y',strtotime($bookings[0]["hidden_date_checkout"]));
+									$booking .= get_option("checkout.item-meta-date").': '.$booking_date_checkout.'<br>';
+								}
+								if (array_key_exists('time_slot',$bookings[0]) && $bookings[0]['time_slot'] != "")
+								{
+									$booking .= get_option("book.item-meta-time").': '. $bookings[0]["time_slot"].'<br>';
+								}
+								$hidden_date = $bookings[0]['hidden_date'];
+								$date_query = date('Y-m-d', strtotime($hidden_date));
+								if ($bookings[0]['date_checkout'] != "")
+								{
+									$date_checkout = $bookings[0]['hidden_date_checkout'];
+									$date_checkout_query = date('Y-m-d',strtotime($date_checkout));
+									$booking_query = "SELECT id FROM `".$wpdb->prefix."booking_history`
 													WHERE post_id = '".$values['product_id']."' AND
 													start_date = '".$date_query."' AND
 													end_date = '".$date_checkout_query."'";
@@ -667,13 +679,18 @@ return $rand_value;
 							//print_r($booking_id);exit;
 						}
 						$f = 0;
-						foreach($addons as $key )
+						//print_r($addons);
+						if(is_plugin_active('woocommerce-product-addons/product-addons.php'))
 						{
-							$addon = $addons[$f]["value"];
-							$f++;		
+							$addons = $values['addons'];
+							foreach($addons as $key )
+							{
+								$addon .= $addons[$f]["name"].': '.$addons[$f]["value"].'<br>';
+								$f++;		
+							}
 						}
-						$instructions = get_post_meta($values[product_id],'instructions');
-						//print_r($instructions);exit;
+						$instructions = get_post_meta($values['product_id'],'instructions');
+						//print_r($addon);exit;
 						if(isset($saved_settings->booking_send_ticket_method) && $saved_settings->booking_send_ticket_method == 'send_by_quantity')
 						{
 							$quantity = $values['quantity'];
@@ -741,6 +758,7 @@ return $rand_value;
       <h6 style="margin-right:0in;margin-bottom:7.5pt;margin-left:0in;color:#909090!important;font-weight:700!important"><span style="font-size:10.0pt;font-family:&quot;Helvetica&quot;,&quot;sans-serif&quot;;text-transform:uppercase">'.$this->headings["booking_details"].'<u></u><u></u></span></h6>
       <p class="MsoNormal"><span style="font-size:11.5pt;font-family:&quot;Helvetica&quot;,&quot;sans-serif&quot;">'.$product_name.'</span> </p>
       <p class="MsoNormal"><span style="font-size:11.5pt;font-family:&quot;Helvetica&quot;,&quot;sans-serif&quot;">'.$booking.'</span> </p>
+       <p class="MsoNormal"><span style="font-size:11.5pt;font-family:&quot;Helvetica&quot;,&quot;sans-serif&quot;">'.$addon.'</span> </p>
       </td>
       <td width="120" valign="top" style="width:1.25in;padding:0in 0in 0in 0in 0!important;margin:0!important">
       <h6 style="margin-right:0in;margin-bottom:7.5pt;margin-left:0in;color:#909090!important;font-weight:700!important"><span style="font-size:10.0pt;font-family:&quot;Helvetica&quot;,&quot;sans-serif&quot;;text-transform:uppercase">'.$this->headings["buyer"].'<u></u><u></u></span></h6>
@@ -793,6 +811,7 @@ return $rand_value;
 									$j++;
 								}
 								//$i++;
+							}
 							}
 						}
 						else if(isset($saved_settings->booking_send_ticket_method) && $saved_settings->booking_send_ticket_method == 'send_by_product')
@@ -855,6 +874,7 @@ return $rand_value;
       <h6 style="margin-right:0in;margin-bottom:7.5pt;margin-left:0in;color:#909090!important;font-weight:700!important"><span style="font-size:10.0pt;font-family:&quot;Helvetica&quot;,&quot;sans-serif&quot;;text-transform:uppercase">'.$this->headings["booking_details"].'<u></u><u></u></span></h6>
       <p class="MsoNormal"><span style="font-size:11.5pt;font-family:&quot;Helvetica&quot;,&quot;sans-serif&quot;">'.$product_name.'</span> </p>
       <p class="MsoNormal"><span style="font-size:11.5pt;font-family:&quot;Helvetica&quot;,&quot;sans-serif&quot;">'.$booking.'</span> </p>
+      <p class="MsoNormal"><span style="font-size:11.5pt;font-family:&quot;Helvetica&quot;,&quot;sans-serif&quot;">'.$addon.'</span> </p>
       </td>
       <td width="120" valign="top" style="width:1.25in;padding:0in 0in 0in 0in 0!important;margin:0!important">
       <h6 style="margin-right:0in;margin-bottom:7.5pt;margin-left:0in;color:#909090!important;font-weight:700!important"><span style="font-size:10.0pt;font-family:&quot;Helvetica&quot;,&quot;sans-serif&quot;;text-transform:uppercase">'.$this->headings["buyer"].'<u></u><u></u></span></h6>
@@ -913,9 +933,80 @@ return $rand_value;
 				}
 				function bkap_send_ticket_email($ticket_content)
 				{
+					if($order->status == 'completed')
+					{
+						$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
+						if(isset($saved_settings->booking_printable_ticket) && $saved_settings->booking_printable_ticket == 'on')
+						{
+							$to = $ticket_content[0][0]['to'];
+							$headers = $ticket_content[0][0]['headers'];
+							$subject = $ticket_content[0][0]['subject'];
+							foreach($ticket_content as $key => $value)
+							{
+								$message .= $value[0]['message'];
+							}
+							wp_mail($to,$subject,$message,$headers);
+						}
+					}
+				}
+				function woocommerce_complete_order($order_id)
+				{
+					global $wpdb;
 					$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
+					$message = '';
 					if(isset($saved_settings->booking_printable_ticket) && $saved_settings->booking_printable_ticket == 'on')
 					{
+						$order_obj = new WC_order($order_id);
+						$order_items = $order_obj->get_items();
+						//print_r($order_items);exit;
+						$ticket_content = array();
+						foreach($order_items as $item_key => $item_value)
+						{
+							$values['quantity'] = $item_value['qty'];
+							$values['product_id'] = $item_value['product_id'];
+							$values['name'] = $item_value['name'];
+							//echo $item_value[get_option("book.item-meta-date")];exit;
+							if ($item_value[get_option("book.item-meta-date")] != "")
+							{
+								$date = $item_value[get_option("book.item-meta-date")];
+								$hidden_date = date('j-n-Y',strtotime($date));
+								$values['booking'][0]['date'] = $date;
+								$values['booking'][0]['hidden_date'] = $hidden_date;
+							}
+							if ($item_value[get_option("checkout.item-meta-date")] != "")
+							{
+								$date_checkout = $item_value[get_option("checkout.item-meta-date")];
+								$hidden_date_checkout = date('j-n-Y',strtotime($date_checkout));
+								$values['booking'][0]['date_checkout'] = $date_checkout;
+								$values['booking'][0]['hidden_date_checkout'] = $hidden_date_checkout;
+							}
+							if ($item_value[get_option("book.item-meta-time")] != "")
+							{
+								$time_slot = $item_value[get_option("book.item-meta-time")];
+								$values['booking'][0]['time_slot'] = $time_slot;
+							}
+							if(is_plugin_active('woocommerce-product-addons/product-addons.php'))
+							{
+								$addons = get_product_addons($item_value['product_id']);
+								//print_r($addons);exit;
+								foreach($addons as $key => $value)
+								{
+									$addon = $value['options'];
+									$i = 0;
+									foreach($addon as $k => $v)
+									{
+										//print_r($v);
+										$name = $v['label'];
+										$values['addons'][$i] = array("name" => $name, "value" => $item_value[$name]);
+										//print_r($values);exit;
+										$i++;
+									}
+									//print_r($values['addons']);exit;
+								}
+							}
+							$ticket = array(apply_filters('bkap_send_ticket',$values,$order_obj));
+							$ticket_content = array_merge($ticket_content,$ticket);
+						}
 						$to = $ticket_content[0][0]['to'];
 						$headers = $ticket_content[0][0]['headers'];
 						$subject = $ticket_content[0][0]['subject'];
@@ -925,6 +1016,7 @@ return $rand_value;
 						}
 						wp_mail($to,$subject,$message,$headers);
 					}
+					//print_r($ticket_content);exit;
 				}
 				function bkap_view_bookings_fields($order_id,$booking_id,$quantity)
 				{
