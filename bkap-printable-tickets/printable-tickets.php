@@ -339,8 +339,13 @@ function woocommerce_booking_meta_delete()
 								$send_by_order = "checked";
 								$send_individually = "";
 							}
+							else
+							{
+								$send_by_order = "";
+								$send_individually = "checked";
+							}
 							?>
-							<input type="radio" name="booking_send_ticket_method_radio" id="booking_send_ticket_method_radio" value="send_by_quantity" <?php echo $send_individually = "checked";?>><b><?php _e('Send 1 ticket per quantity&nbsp&nbsp&nbsp&nbsp&nbsp;', 'woocommerce-booking');?> </b></input>
+							<input type="radio" name="booking_send_ticket_method_radio" id="booking_send_ticket_method_radio" value="send_by_quantity" <?php echo $send_individually;?>><b><?php _e('Send 1 ticket per quantity&nbsp&nbsp&nbsp&nbsp&nbsp;', 'woocommerce-booking');?> </b></input>
 							<input type="radio" id="booking_send_ticket_method_radio" name="booking_send_ticket_method_radio" value="send_by_product"<?php echo $send_by_order;?>><b><?php _e('Send 1 ticket per product', 'woocommerce-booking');?> </b></input>
 							<img class="help_tip" width="16" height="16" data-tip="<?php _e('Enable Send 1 ticket per quantity to send ticket for each product and each quantity of product in order and Send 1 ticket per product to send each ticket per product in order.', 'woocommerce-booking');?>" src="<?php echo plugins_url() ;?>/woocommerce/assets/images/help.png"/>
 						</td>
@@ -497,223 +502,238 @@ return $rand_value;
 				function bkap_send_ticket_content($values,$order)
 				{
 					global $wpdb;
-					$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
-					$booking_settings = get_post_meta( $values['product_id'], 'woocommerce_booking_settings', true);
-					if(isset($saved_settings->booking_printable_ticket) && $saved_settings->booking_printable_ticket == 'on')
+					if($order->status == 'completed')
 					{
-						if(isset($booking_settings['booking_enable_date']) && $booking_settings['booking_enable_date'] == 'on')
+						$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
+						$booking_settings = get_post_meta( $values['product_id'], 'woocommerce_booking_settings', true);
+						//print_r($saved_settings->booking_send_ticket_method);exit;
+						if(isset($saved_settings->booking_printable_ticket) && $saved_settings->booking_printable_ticket == 'on')
 						{
-							//print_r($values);exit;
-							//print_r($order);exit;
-							if(array_key_exists('data',$values) )
+							if(isset($booking_settings['booking_enable_date']) && $booking_settings['booking_enable_date'] == 'on')
 							{
-								$_product = $values['data'];
-								$product_name = $_product->get_title();
-							}
-							else
-							{
-								$product_name = $values['name'];
-							}
-							$from_email = get_option('admin_email');
-							$buyers_firstname = $order->billing_first_name;
-							$buyers_lastname = $order->billing_last_name;
-							$to = $order->billing_email;
-							$post_id = $values['product_id'];
-							$headers[] = "From:".$from_email;
-							$headers[] = "Content-type: text/html";
-							$completed_date = date('F j, Y',strtotime($order->completed_date));
-							$subject = "Your Ticket for Order #".$order->id." from ".$completed_date;
-							//echo $subject;exit;
+								//print_r($values);exit;
+								//print_r($order);exit;
+								if(array_key_exists('data',$values) )
+								{
+									$_product = $values['data'];
+									$product_name = $_product->get_title();
+								}
+								else
+								{
+									$product_name = $values['name'];
+								}
+								$from_email = get_option('admin_email');
+								$buyers_firstname = $order->billing_first_name;
+								$buyers_lastname = $order->billing_last_name;
+								$to = $order->billing_email;
+								$post_id = $values['product_id'];
+								$headers[] = "From:".$from_email;
+								$headers[] = "Content-type: text/html";
+								$completed_date = date('F j, Y',strtotime($order->completed_date));
+								$subject = "Your Ticket for Order #".$order->id." from ".$completed_date;
+								//echo $subject;exit;
+								
 							
-							
-							$logo = get_header_image();
-							$message = '';
-							$booking = '';
-							$addon = '';
-							$site_url = get_site_url();
-							$site_title = get_option('blogname');
-							$site_tagline = get_option('blogdescription'); 
-							if(array_key_exists('booking',$values) )
-							{
-								$bookings = $values['booking'];
-										
-								if (array_key_exists('date',$bookings[0]) && $bookings[0]['date'] != "")
+								$logo = get_header_image();
+								$message = '';
+								$booking = '';
+								$addon = '';
+								$site_url = get_site_url();
+								$site_title = get_option('blogname');
+								$site_tagline = get_option('blogdescription'); 
+								if(array_key_exists('booking',$values) )
 								{
-									$booking_date = date('d F, Y',strtotime($bookings[0]["hidden_date"]));
-									$booking = get_option("book.item-meta-date").': '.$booking_date.'<br>';
-								}
-								if (array_key_exists('date_checkout',$bookings[0]) && $bookings[0]['date_checkout'] != "")
-								{
-									$booking_date_checkout = date('d F, Y',strtotime($bookings[0]["hidden_date_checkout"]));
-									$booking .= get_option("checkout.item-meta-date").': '.$booking_date_checkout.'<br>';
-								}
-								if (array_key_exists('time_slot',$bookings[0]) && $bookings[0]['time_slot'] != "")
-								{
-									$booking .= get_option("book.item-meta-time").': '. $bookings[0]["time_slot"].'<br>';
-								}
-								$hidden_date = $bookings[0]['hidden_date'];
-								$date_query = date('Y-m-d', strtotime($hidden_date));
-								if ($bookings[0]['date_checkout'] != "")
-								{
-									$date_checkout = $bookings[0]['hidden_date_checkout'];
-									$date_checkout_query = date('Y-m-d',strtotime($date_checkout));
-									$booking_query = "SELECT id FROM `".$wpdb->prefix."booking_history`
-													WHERE post_id = '".$values['product_id']."' AND
-													start_date = '".$date_query."' AND
-													end_date = '".$date_checkout_query."'";
-								$booking_results = $wpdb->get_results( $booking_query );
-								$booking_id[] = $booking_results[0]->id;
-							}
-							else if ($bookings[0]['time_slot'] != "")
-							{
-								$time_select = $bookings[0]['time_slot'];
-								if(strpos($time_select,"<br>") !== false )
-								{
-									$time_exploded = explode("<br>", $time_select);
-									//print_r($time_exploded);exit;
-									array_shift($time_exploded);
-									$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
-									if (isset($saved_settings))
+									$bookings = $values['booking'];
+											
+									if (array_key_exists('date',$bookings[0]) && $bookings[0]['date'] != "")
 									{
-										$time_format = $saved_settings->booking_time_format;
+										$booking_date = date('d F, Y',strtotime($bookings[0]["hidden_date"]));
+										$booking = get_option("book.item-meta-date").': '.$booking_date.'<br>';
 									}
-									else
+									if (array_key_exists('date_checkout',$bookings[0]) && $bookings[0]['date_checkout'] != "")
 									{
-										$time_format = "12";
+										$booking_date_checkout = date('d F, Y',strtotime($bookings[0]["hidden_date_checkout"]));
+										$booking .= get_option("checkout.item-meta-date").': '.$booking_date_checkout.'<br>';
 									}
-									$time_slot = array();
-									foreach($time_exploded as $k => $v)
+									if (array_key_exists('time_slot',$bookings[0]) && $bookings[0]['time_slot'] != "")
 									{
-										$time_slot = explode("-",$v);
-										$from_time = trim($time_slot[0]);
-										if(isset($time_slot[1]))$to_time = trim($time_slot[1]);
-										else $to_time = '';
-										if ($time_format == '12')
-										{
-											$from_time = date('h:i A', strtotime($time_slot[0]));
-											if(isset($time_slot[1]))$to_time = date('h:i A', strtotime($time_slot[1]));
-										}
-										$query_from_time = date('G:i', strtotime($time_slot[0]));
-										if(isset($time_slot[1]))$query_to_time = date('G:i', strtotime($time_slot[1]));
-										else $query_to_time = '';
-										if($query_to_time != '')
+										$booking .= get_option("book.item-meta-time").': '. $bookings[0]["time_slot"].'<br>';
+									}
+									$hidden_date = $bookings[0]['hidden_date'];
+									$date_query = date('Y-m-d', strtotime($hidden_date));
+									if (isset($bookings[0]['date_checkout']) && $bookings[0]['date_checkout'] != "")
+									{
+										$date_checkout = $bookings[0]['hidden_date_checkout'];
+										$date_checkout_query = date('Y-m-d',strtotime($date_checkout));
+										$booking_id_query = "SELECT booking_id FROM `".$wpdb->prefix."booking_order_history`
+														WHERE order_id = '".$order->id."'";
+										$booking_id_results = $wpdb->get_results( $booking_id_query );
+										foreach($booking_id_results as $key => $val)
 										{
 											$booking_query = "SELECT id FROM `".$wpdb->prefix."booking_history`
-											WHERE post_id = '".$values['product_id']."' AND
-											start_date = '".$date_query."' AND
-											from_time = '".$query_from_time."' AND
-											to_time = '".$query_to_time."' ";
+														WHERE post_id = '".$values['product_id']."' AND
+													start_date = '".$date_query."' AND
+													end_date = '".$date_checkout_query."' AND
+													id = '".$val->booking_id."'";
 											$booking_results = $wpdb->get_results( $booking_query );
-											$booking_id[] = $booking_results[0]->id;
+											//print_r($booking_results);
+											if(count($booking_results) > 0)
+											{
+												$booking_id[] = $booking_results[0]->id;
+											}
+										}
+										//print_r($booking_id);exit;
+									}
+									else if (isset($bookings[0]['time_slot']) && $bookings[0]['time_slot'] != "")
+									{
+										$time_select = $bookings[0]['time_slot'];
+										$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
+										if (isset($saved_settings))
+										{
+											$time_format = $saved_settings->booking_time_format;
+										}
+										else
+										{
+											$time_format = "12";
+										}
+										if(strpos($time_select,"<br>") !== false )
+										{
+											$time_exploded = explode("<br>", $time_select);
+											//print_r($time_exploded);exit;
+											array_shift($time_exploded);
+											$time_slot = array();
+											foreach($time_exploded as $k => $v)
+											{
+												$time_slot = explode("-",$v);
+												$from_time = trim($time_slot[0]);
+												if(isset($time_slot[1]))$to_time = trim($time_slot[1]);
+												else $to_time = '';
+												if ($time_format == '12')
+												{
+													$from_time = date('h:i A', strtotime($time_slot[0]));
+													if(isset($time_slot[1]))$to_time = date('h:i A', strtotime($time_slot[1]));
+												}
+												$query_from_time = date('G:i', strtotime($time_slot[0]));
+												if(isset($time_slot[1]))$query_to_time = date('G:i', strtotime($time_slot[1]));
+												else $query_to_time = '';
+												if($query_to_time != '')
+												{
+													$booking_query = "SELECT id FROM `".$wpdb->prefix."booking_history`
+													WHERE post_id = '".$values['product_id']."' AND
+													start_date = '".$date_query."' AND
+													from_time = '".$query_from_time."' AND
+													to_time = '".$query_to_time."' ";
+													$booking_results = $wpdb->get_results( $booking_query );
+													$booking_id[] = $booking_results[0]->id;
+												}		
+												else
+												{
+													$booking_query = "SELECT id FROM `".$wpdb->prefix."booking_history`
+													WHERE post_id = '".$values['product_id']."' AND
+													start_date = '".$date_query."' AND
+													from_time = '".$query_from_time."'";
+													$booking_results = $wpdb->get_results( $booking_query );
+													$booking_id[] = $booking_results[0]->id;
+												}
+											}
 										}		
 										else
 										{
-											$booking_query = "SELECT id FROM `".$wpdb->prefix."booking_history`
-											WHERE post_id = '".$values['product_id']."' AND
-											start_date = '".$date_query."' AND
-											from_time = '".$query_from_time."'";
-											$booking_results = $wpdb->get_results( $booking_query );
-											$booking_id[] = $booking_results[0]->id;
-										}
-									}		
-								}
-								else
-								{
-									$time_slot = explode("-",$time_select);
-									$from_time = trim($time_slot[0]);
-									if(isset($time_slot[1]))$to_time = trim($time_slot[1]);
-									else $to_time = '';
-									if ($time_format == '12')
-									{
-										$from_time = date('h:i A', strtotime($time_slot[0]));
-										if(isset($time_slot[1]))$to_time = date('h:i A', strtotime($time_slot[1]));
-									}
-									$query_from_time = date('G:i', strtotime($time_slot[0]));
-									if(isset($time_slot[1]))$query_to_time = date('G:i', strtotime($time_slot[1]));
-									else $query_to_time = '';
-									if($query_to_time != '')
-									{
-										$booking_query = "SELECT id FROM `".$wpdb->prefix."booking_history`
-										WHERE post_id = '".$values['product_id']."' AND
-										start_date = '".$date_query."' AND
-										from_time = '".$query_from_time."' AND
-										to_time = '".$query_to_time."' ";
-										$booking_results = $wpdb->get_results( $booking_query );
-										$booking_id[] = $booking_results[0]->id;
+											$time_slot = explode("-",$time_select);
+											$from_time = trim($time_slot[0]);
+											if(isset($time_slot[1]))$to_time = trim($time_slot[1]);
+											else $to_time = '';
+											if ($time_format == '12')
+											{
+												$from_time = date('h:i A', strtotime($time_slot[0]));
+												if(isset($time_slot[1]))$to_time = date('h:i A', strtotime($time_slot[1]));
+											}
+											$query_from_time = date('G:i', strtotime($time_slot[0]));
+											if(isset($time_slot[1]))$query_to_time = date('G:i', strtotime($time_slot[1]));
+											else $query_to_time = '';
+											if($query_to_time != '')
+											{
+												$booking_query = "SELECT id FROM `".$wpdb->prefix."booking_history`
+												WHERE post_id = '".$values['product_id']."' AND
+												start_date = '".$date_query."' AND
+												from_time = '".$query_from_time."' AND
+												to_time = '".$query_to_time."' ";
+												$booking_results = $wpdb->get_results( $booking_query );
+												$booking_id[] = $booking_results[0]->id;
+											}
+											else
+											{
+												$booking_query = "SELECT id FROM `".$wpdb->prefix."booking_history`
+												WHERE post_id = '".$values['product_id']."' AND
+												start_date = '".$date_query."' AND
+												from_time = '".$query_from_time."'";
+												$booking_results = $wpdb->get_results( $booking_query );
+												$booking_id[] = $booking_results[0]->id;
+											}
+										}	
 									}
 									else
 									{
 										$booking_query = "SELECT id FROM `".$wpdb->prefix."booking_history`
 										WHERE post_id = '".$values['product_id']."' AND
-										start_date = '".$date_query."' AND
-										from_time = '".$query_from_time."'";
+										start_date = '".$date_query."'";
 										$booking_results = $wpdb->get_results( $booking_query );
 										$booking_id[] = $booking_results[0]->id;
 									}
 								}
-							}
-							else
-							{
-								$booking_query = "SELECT id FROM `".$wpdb->prefix."booking_history`
-								WHERE post_id = '".$values['product_id']."' AND
-								start_date = '".$date_query."'";
-								$booking_results = $wpdb->get_results( $booking_query );
-								$booking_id[] = $booking_results[0]->id;
-							}
-							if(is_plugin_active('bkap-tour-operators/tour_operators_addon.php'))
-							{
-								if($booking_settings['show_tour_operator'] == 'on')
+								if(is_plugin_active('bkap-tour-operators/tour_operators_addon.php'))
 								{
-									$booking_tour_operator = $booking_settings["booking_tour_operator"];
-									$user = get_userdata( $booking_tour_operator );
-									if(isset($user->user_login))
+									if($booking_settings['show_tour_operator'] == 'on')
 									{
-										$booking.= 'Tour Operator: '.$user->user_login.'<br>';
-									}
-									if($booking_settings['booking_show_comment'] == 'on')
-									{
-										$booking.= book_t('book.item-comments').': '.$bookings[0]['comments'].'<br>';
+										$booking_tour_operator = $booking_settings["booking_tour_operator"];
+										$user = get_userdata( $booking_tour_operator );
+										if(isset($user->user_login))
+										{
+											$booking.= 'Tour Operator: '.$user->user_login.'<br>';
+										}
+										if($booking_settings['booking_show_comment'] == 'on')
+										{
+											$booking.= book_t('book.item-comments').': '.$bookings[0]['comments'].'<br>';
+										}
 									}
 								}
-							}
-							//print_r($booking_id);exit;
-						}
-						$f = 0;
-						//print_r($addons);
-						if(is_plugin_active('woocommerce-product-addons/product-addons.php'))
-						{
-							$addons = $values['addons'];
-							foreach($addons as $key )
-							{
-								$addon .= $addons[$f]["name"].': '.$addons[$f]["value"].'<br>';
-								$f++;		
-							}
-						}
-						$instructions = get_post_meta($values['product_id'],'instructions');
-						//print_r($addon);exit;
-						if(isset($saved_settings->booking_send_ticket_method) && $saved_settings->booking_send_ticket_method == 'send_by_quantity')
-						{
-							$quantity = $values['quantity'];
+								//print_r($booking_id);exit;
+								$f = 0;
+								//print_r($addons);
+								if(is_plugin_active('woocommerce-product-addons/product-addons.php'))
+								{
+									$addons = $values['addons'];
+									foreach($addons as $key )
+									{
+										$addon .= $addons[$f]["name"].': '.$addons[$f]["value"].'<br>';
+										$f++;		
+									}
+								}
+								$instructions = get_post_meta($values['product_id'],'instructions');
+								//print_r($addon);exit;
+								if(isset($saved_settings->booking_send_ticket_method) && $saved_settings->booking_send_ticket_method == 'send_by_quantity')
+								{
+									$quantity = $values['quantity'];
 						
-							for($i=0;$i<$quantity;$i++)
-							{
-								$ticket_sql = "SELECT MAX(CAST(booking_meta_value AS unsigned)) AS ticket_id FROM `".$wpdb->prefix."booking_item_meta` WHERE booking_meta_key = '_ticket_id'";
-								//echo $ticket_sql;exit;
-								$ticket_results = $wpdb->get_results($ticket_sql);
-								$ticket_no = $ticket_results[0]->ticket_id;
-								if($ticket_no == '')
-								{
-									$ticket_no = 1;
-								}
-								else
-								{
-									//echo $ticket_no;
-									$ticket_no = $ticket_no + 1;
+									for($i=0;$i<$quantity;$i++)
+									{
+										$ticket_sql = "SELECT MAX(CAST(booking_meta_value AS unsigned)) AS ticket_id FROM `".$wpdb->prefix."booking_item_meta` WHERE booking_meta_key = '_ticket_id'";
+										//echo $ticket_sql;exit;
+										$ticket_results = $wpdb->get_results($ticket_sql);
+										$ticket_no = $ticket_results[0]->ticket_id;
+										if($ticket_no == '')
+										{
+											$ticket_no = 1;
+										}
+										else
+										{
+											//echo $ticket_no;
+											$ticket_no = $ticket_no + 1;
 									
-								}
-								//echo $ticket_no;exit;
-								$security_unique_no = $this->get_rand_id(10);
-								$message .= '
+										}
+										//echo $ticket_no;exit;
+										$security_unique_no = $this->get_rand_id(10);
+										$message .= '
 									<table>
 <tbody>
 <tr>
@@ -789,47 +809,48 @@ return $rand_value;
     </td>
    </tr>
    </table>';
-								$j = 0;
-								foreach($booking_id as $b_key => $b_val)
-								{
-									$query_ticket= "INSERT INTO `".$wpdb->prefix."booking_item_meta`
-										(order_id,booking_id,booking_meta_key,booking_meta_value)
-										VALUES (
-										'".$order->id."',
-										'".$booking_id[$j]."',
-										'_ticket_id',
-										'".$ticket_no."')";
-									mysql_query( $query_ticket );
-									$query_security_code = "INSERT INTO `".$wpdb->prefix."booking_item_meta`
-										(order_id,booking_id,booking_meta_key,booking_meta_value)
-										VALUES (
-										'".$order->id."',
-										'".$booking_id[$j]."',
-										'_security_code',
-										'".$security_unique_no."')";
-									mysql_query( $query_security_code );
-									$j++;
+										$j = 0;
+										foreach($booking_id as $b_key => $b_val)
+										{
+											$query_ticket= "INSERT INTO `".$wpdb->prefix."booking_item_meta`
+											(order_id,booking_id,booking_meta_key,booking_meta_value)
+											VALUES (
+											'".$order->id."',
+											'".$booking_id[$j]."',
+											'_ticket_id',
+											'".$ticket_no."')";
+											$wpdb->query($query_ticket );
+											$query_security_code = "INSERT INTO `".$wpdb->prefix."booking_item_meta`
+											(order_id,booking_id,booking_meta_key,booking_meta_value)
+											VALUES (
+											'".$order->id."',
+											'".$booking_id[$j]."',
+											'_security_code',
+											'".$security_unique_no."')";
+											$wpdb->query($query_security_code );
+											$j++;
+										}
+										//$i++;
+									}
 								}
-								//$i++;
-							}
-							}
-						}
-						else if(isset($saved_settings->booking_send_ticket_method) && $saved_settings->booking_send_ticket_method == 'send_by_product')
-						{
-							$ticket_sql = "SELECT MAX(CAST(booking_meta_value AS unsigned)) AS ticket_id FROM `".$wpdb->prefix."booking_item_meta` WHERE booking_meta_key = '_ticket_id'";
-							$ticket_results = $wpdb->get_results($ticket_sql);
-							//echo $ticket_no;
-							$ticket_no = $ticket_results[0]->ticket_id;
-							if($ticket_no == '')
-							{
-								$ticket_no = 1;
-							}
-							else
-							{
-								$ticket_no = $ticket_no + 1;
-							}
-							$security_unique_no = $this->get_rand_id(10);
-							$message .= '
+								else if(isset($saved_settings->booking_send_ticket_method) && $saved_settings->booking_send_ticket_method == 'send_by_product')
+								{
+									$ticket_sql = "SELECT MAX(CAST(booking_meta_value AS unsigned)) AS ticket_id FROM `".$wpdb->prefix."booking_item_meta` WHERE booking_meta_key = '_ticket_id'";
+									$ticket_results = $wpdb->get_results($ticket_sql);
+									//echo $ticket_no;
+						
+									$ticket_no = $ticket_results[0]->ticket_id;
+									//echo "egre";exit;
+									if($ticket_no == '')
+									{
+										$ticket_no = 1;
+									}
+									else
+									{
+										$ticket_no = $ticket_no + 1;
+									}
+									$security_unique_no = $this->get_rand_id(10);
+									$message .= '
 									<table>
 <tbody>
 <tr>
@@ -905,46 +926,67 @@ return $rand_value;
     </td>
    </tr>
    </table>';
-							$j = 0;
-							foreach($booking_id as $b_key => $b_val)
-							{
-								$query_ticket= "INSERT INTO `".$wpdb->prefix."booking_item_meta`
+									$j = 0;
+									foreach($booking_id as $b_key => $b_val)
+									{
+										$query_ticket= "INSERT INTO `".$wpdb->prefix."booking_item_meta`
 										(order_id,booking_id,booking_meta_key,booking_meta_value)
 										VALUES (
 										'".$order->id."',
 										'".$booking_id[$j]."',
 										'_ticket_id',
 										'".$ticket_no."')";
-								mysql_query( $query_ticket );
-								$query_security_code = "INSERT INTO `".$wpdb->prefix."booking_item_meta`
+										$wpdb->query( $query_ticket );
+										$query_security_code = "INSERT INTO `".$wpdb->prefix."booking_item_meta`
 										(order_id,booking_id,booking_meta_key,booking_meta_value)
 										VALUES (
 										'".$order->id."',
 										'".$booking_id[$j]."',
 										'_security_code',
 										'".$security_unique_no."')";
-								mysql_query( $query_security_code );
-								$j++;
+										$wpdb->query(  $query_security_code );
+										$j++;
+									}
+								}
+								$ticket[] = array('to'=>$to, 'subject' => $subject, 'message' => $message, 'headers' => $headers);
+							}
+							else
+							{
+								$ticket = array();
 							}
 						}
+						//echo $message;exit;
 					}
-					$ticket[] = array('to'=>$to, 'subject' => $subject, 'message' => $message, 'headers' => $headers);
+					else
+					{
+						$ticket = array();
+					}
 					return $ticket;
+
 				}
 				function bkap_send_ticket_email($ticket_content)
 				{
-					if($order->status == 'completed')
+					$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
+					if(isset($saved_settings->booking_printable_ticket) && $saved_settings->booking_printable_ticket == 'on')
 					{
-						$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
-						if(isset($saved_settings->booking_printable_ticket) && $saved_settings->booking_printable_ticket == 'on')
+						$i = 0;
+						$send_ticket = 'Y';
+						foreach($ticket_content as $key => $value)
 						{
-							$to = $ticket_content[0][0]['to'];
-							$headers = $ticket_content[0][0]['headers'];
-							$subject = $ticket_content[0][0]['subject'];
-							foreach($ticket_content as $key => $value)
+							if(count($value) > 0)
 							{
-								$message .= $value[0]['message'];
+								$to = $value[$i]['to'];
+								$headers = $value[$i]['headers'];
+								$subject = $value[$i]['subject'];
+								$message .= $value[$i]['message'];
 							}
+							else
+							{
+								$send_ticket = 'N';
+							}
+						}
+						if($send_ticket == 'Y')
+						{
 							wp_mail($to,$subject,$message,$headers);
 						}
 					}
@@ -962,25 +1004,26 @@ return $rand_value;
 						$ticket_content = array();
 						foreach($order_items as $item_key => $item_value)
 						{
+							$values = array();
 							$values['quantity'] = $item_value['qty'];
 							$values['product_id'] = $item_value['product_id'];
 							$values['name'] = $item_value['name'];
-							//echo $item_value[get_option("book.item-meta-date")];exit;
-							if ($item_value[get_option("book.item-meta-date")] != "")
+							//print_r($item_value);
+							if (array_key_exists(get_option("book.item-meta-date"),$item_value) &&  $item_value[get_option("book.item-meta-date")] != "")
 							{
 								$date = $item_value[get_option("book.item-meta-date")];
 								$hidden_date = date('j-n-Y',strtotime($date));
 								$values['booking'][0]['date'] = $date;
 								$values['booking'][0]['hidden_date'] = $hidden_date;
 							}
-							if ($item_value[get_option("checkout.item-meta-date")] != "")
+							if (array_key_exists(get_option("checkout.item-meta-date"),$item_value) && $item_value[get_option("checkout.item-meta-date")] != "")
 							{
 								$date_checkout = $item_value[get_option("checkout.item-meta-date")];
 								$hidden_date_checkout = date('j-n-Y',strtotime($date_checkout));
 								$values['booking'][0]['date_checkout'] = $date_checkout;
 								$values['booking'][0]['hidden_date_checkout'] = $hidden_date_checkout;
 							}
-							if ($item_value[get_option("book.item-meta-time")] != "")
+							if (array_key_exists(get_option("book.item-meta-time"),$item_value) && $item_value[get_option("book.item-meta-time")] != "")
 							{
 								$time_slot = $item_value[get_option("book.item-meta-time")];
 								$values['booking'][0]['time_slot'] = $time_slot;
@@ -1007,14 +1050,40 @@ return $rand_value;
 							$ticket = array(apply_filters('bkap_send_ticket',$values,$order_obj));
 							$ticket_content = array_merge($ticket_content,$ticket);
 						}
-						$to = $ticket_content[0][0]['to'];
+						//exit;
+						//print_r($ticket_content);
+						/*$to = $ticket_content[0][0]['to'];
 						$headers = $ticket_content[0][0]['headers'];
 						$subject = $ticket_content[0][0]['subject'];
 						foreach($ticket_content as $key => $value)
 						{
 							$message .= $value[0]['message'];
+						}*/
+						//print_r($to);
+					//	print_r($subject);
+						//print_r($message);
+						//print_r($headers);exit;
+						$i = 0;
+						$send_ticket = 'Y';
+						foreach($ticket_content as $key => $value)
+						{
+							if(count($value) > 0)
+							{
+								$to = $value[$i]['to'];
+								$headers = $value[$i]['headers'];
+								$subject = $value[$i]['subject'];
+								$message .= $value[$i]['message'];
+							}
+							else
+							{
+								$send_ticket = 'N';
+							}
 						}
-						wp_mail($to,$subject,$message,$headers);
+						if($send_ticket == 'Y')
+						{
+							wp_mail($to,$subject,$message,$headers);
+						}
+						//wp_mail($to,$subject,$message,$headers);
 					}
 					//print_r($ticket_content);exit;
 				}
