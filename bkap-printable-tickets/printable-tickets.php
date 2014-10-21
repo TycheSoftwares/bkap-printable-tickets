@@ -1012,16 +1012,35 @@ return $rand_value;
 							if (array_key_exists(get_option("book.item-meta-date"),$item_value) &&  $item_value[get_option("book.item-meta-date")] != "")
 							{
 								$date = $item_value[get_option("book.item-meta-date")];
-								$date_str = str_replace(",","",$date);
-								$hidden_date = date('j-n-Y',strtotime($date_str));
+								if($date_format == 'dd/mm/y')
+								{
+									$date_explode = explode("/",$date);
+									//print_r($date_explode);
+									$hidden_date = date('j-n-Y',mktime(0,0,0,$date_explode[1],$date_explode[0],$date_explode[2]));
+								}
+								else
+								{
+									//print_r(date_parse_from_format($date_format, $date));exit;
+									$date_str = str_replace(",","",$date);
+									$hidden_date = date('j-n-Y',strtotime($date_str));
+								}
 								$values['booking'][0]['date'] = $date;
 								$values['booking'][0]['hidden_date'] = $hidden_date;
 							}
 							if (array_key_exists(get_option("checkout.item-meta-date"),$item_value) && $item_value[get_option("checkout.item-meta-date")] != "")
 							{
 								$date_checkout = $item_value[get_option("checkout.item-meta-date")];
-								$date_checkout_str = str_replace(",","",$date_checkout);
-								$hidden_date_checkout = date('j-n-Y',strtotime($date_checkout_str));
+								if($date_format == 'dd/mm/y')
+								{
+									$date_checkout_explode = explode("/",$date_checkout);
+									$hidden_date_checkout = date('j-n-Y',mktime(0,0,0,$date_checkout_explode[1],$date_checkout_explode[0],$date_checkout_explode[2]));
+								}
+								else
+								{
+									//print_r(date_parse_from_format($date_format, $date));exit;
+									$date_checkout_str = str_replace(",","",$date_checkout);
+									$hidden_date_checkout = date('j-n-Y',strtotime($date_checkout_str));
+								}
 								$values['booking'][0]['date_checkout'] = $date_checkout;
 								$values['booking'][0]['hidden_date_checkout'] = $hidden_date_checkout;
 							}
