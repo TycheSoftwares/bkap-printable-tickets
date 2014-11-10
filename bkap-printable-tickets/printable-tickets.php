@@ -576,7 +576,7 @@ return $rand_value;
 													end_date = '".$date_checkout_query."' AND
 													id = '".$val->booking_id."'";
 											$booking_results = $wpdb->get_results( $booking_query );
-											//print_r($booking_results);
+										//	print_r($booking_results);
 											if(count($booking_results) > 0)
 											{
 												$booking_id[] = $booking_results[0]->id;
@@ -1019,6 +1019,12 @@ return $rand_value;
 									//print_r($date_explode);
 									$hidden_date = date('j-n-Y',mktime(0,0,0,$date_explode[1],$date_explode[0],$date_explode[2]));
 								}
+								else if($date_format == 'y/mm/dd')
+								{
+									$date_explode = explode("/",$date);
+									//print_r($date_explode);
+									$hidden_date = date('j-n-Y',mktime(0,0,0,$date_explode[1],$date_explode[2],$date_explode[0]));
+								}
 								else
 								{
 									//print_r(date_parse_from_format($date_format, $date));exit;
@@ -1035,6 +1041,11 @@ return $rand_value;
 								{
 									$date_checkout_explode = explode("/",$date_checkout);
 									$hidden_date_checkout = date('j-n-Y',mktime(0,0,0,$date_checkout_explode[1],$date_checkout_explode[0],$date_checkout_explode[2]));
+								}
+								else if($date_format == 'y/mm/dd')
+								{
+									$date_checkout_explode = explode("/",$date_checkout);
+									$hidden_date_checkout = date('j-n-Y',mktime(0,0,0,$date_checkout_explode[1],$date_checkout_explode[2],$date_checkout_explode[0]));
 								}
 								else
 								{
