@@ -995,6 +995,7 @@ return $rand_value;
 				{
 					global $wpdb;
 					$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
+					$date_format = $saved_settings->booking_date_format;
 					$message = '';
 					if(isset($saved_settings->booking_printable_ticket) && $saved_settings->booking_printable_ticket == 'on')
 					{
