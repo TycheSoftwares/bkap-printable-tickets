@@ -7,7 +7,7 @@
  * Allows plugins to use their own update API.
  *
  * @author Ashok Rane
- * @version 1.0
+ * @version 1.2
  */
 class EDD_PRINT_TICKET_BOOK_Plugin_Updater {
 	private $api_url  = 'http://www.tychesoftwares.com/';
