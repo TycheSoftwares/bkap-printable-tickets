@@ -89,9 +89,9 @@ function is_bkap_tickets_active() {
 				add_action('woocommerce_order_status_completed' , array(&$this,'woocommerce_complete_order'),10,1);
 				add_action('bkap_add_submenu',array(&$this, 'printable_ticket_menu'));
 				// Add columns headers in the View Bookings page
-				add_filter( 'after_booking_date' , array(&$this,'bkap_printable_tickets_column_name'));
+				add_filter( 'bkap_after_booking_date' , array(&$this,'bkap_printable_tickets_column_name'));
 				// Add column values
-				add_filter( 'after_booking_date_value' ,array(&$this,'bkap_printable_tickets_column_value'),10,2);
+				add_filter( 'bkap_after_booking_date_value' ,array(&$this,'bkap_printable_tickets_column_value'),10,2);
 				add_action('admin_init', array(&$this, 'edd_sample_register_option_print_ticket'));
 				add_action('admin_init', array(&$this, 'edd_sample_deactivate_license_print_ticket'));
 				add_action('admin_init', array(&$this, 'edd_sample_activate_license_print_ticket'));
