@@ -89,9 +89,9 @@ function is_bkap_tickets_active() {
 				add_action('woocommerce_order_status_completed' , array(&$this,'woocommerce_complete_order'),10,1);
 				add_action('bkap_add_submenu',array(&$this, 'printable_ticket_menu'));
 				// Add columns headers in the View Bookings page
-				add_filter( 'bkap_after_booking_date' , array(&$this,'bkap_printable_tickets_column_name'));
+				add_filter( 'bkap_view_bookings_table_columns' , array(&$this,'bkap_printable_tickets_column_name'),10,1);
 				// Add column values
-				add_filter( 'bkap_after_booking_date_value' ,array(&$this,'bkap_printable_tickets_column_value'),10,2);
+				add_filter( 'bkap_bookings_table_data' ,array(&$this,'bkap_printable_tickets_column_value'),10,1);
 				add_action('admin_init', array(&$this, 'edd_sample_register_option_print_ticket'));
 				add_action('admin_init', array(&$this, 'edd_sample_deactivate_license_print_ticket'));
 				add_action('admin_init', array(&$this, 'edd_sample_activate_license_print_ticket'));
@@ -916,51 +916,58 @@ return $rand_value;
 				 * Add the columns Ticket ID and Security Code in the
 				* View Bookings page
 				**********************************************************/
-				function bkap_printable_tickets_column_name() {
-					$return_value = '<th> Ticket ID </th>
-									 <th> Security Code </th>';
-					return $return_value;
+				function bkap_printable_tickets_column_name($columns) {
+					$columns = array(
+								'ID'     		=> __( 'Order ID', 'woocommerce-booking' ),
+								'name'  		=> __( 'Customer Name', 'woocommerce-booking' ),
+								'product_name'  => __( 'Product Name', 'woocommerce-booking' ),
+								'checkin_date'  => __( 'Check-in Date', 'woocommerce-booking' ),
+								'checkout_date' => __( 'Check-out Date', 'woocommerce-booking' ),
+								'booking_time'  => __( 'Booking Time', 'woocommerce-booking' ),
+								'quantity'  	=> __( 'Quantity', 'woocommerce-booking' ),
+								'amount'  		=> __( 'Amount', 'woocommerce-booking' ),
+								'order_date'  	=> __( 'Order Date', 'woocommerce-booking' ),
+								'ticket_id'		=> __( 'Ticket ID', 'woocommerce-booking' ),
+								'security_code' => __( 'Security Code', 'woocommerce-booking'),
+								'actions'  		=> __( 'Actions', 'woocommerce-booking' )
+					);
+					return $columns;
 				}
 				/**************************************************************
 				 * Add the column values in the View bookings page
 				*************************************************************/
-				function bkap_printable_tickets_column_value($order_id,$booking_id) {
+		function bkap_printable_tickets_column_value($booking_data) {
 					global $wpdb;
-					$ticket_id_str = '';
-					$security_code_str = '';
-					$order = new WC_Order( $order_id );
-					$get_quantity = $order->get_items();
-					foreach($get_quantity as $item) {
-						$quantity = $item['qty'];
-					}
-					$date_lockout = "SELECT booking_meta_value FROM `".$wpdb->prefix."booking_item_meta`
-										WHERE order_id= %d AND booking_id= %d";
-					$results_date_lock = $wpdb->get_results($wpdb->prepare($date_lockout,$order_id,$booking_id));
-					$j = 1;
-					$k = 0;
-						
-					for($i = 0;$i<$quantity;$i++) {
-						if(!empty($results_date_lock)) {
-							if(array_key_exists($j,$results_date_lock) && array_key_exists($k,$results_date_lock)) {
+					
+					foreach ($booking_data as $key => $value) {
+						$value->ticket_id = $value->security_code = '';
+						$booking_meta = "SELECT booking_meta_value FROM `".$wpdb->prefix."booking_item_meta`
+										WHERE order_id= %d AND booking_id = %d";
+						$results_meta = $wpdb->get_results($wpdb->prepare($booking_meta,$value->ID,$value->booking_id));
+						$j = 1;
+						$k = 0;
+						for($i = 0;$i<$value->quantity;$i++) {
+							if(!empty($results_meta)) {
+								if(array_key_exists($j,$results_meta) && array_key_exists($k,$results_meta)) {
+									if ($value->ticket_id != '') {
+										$value->ticket_id .= ',';
+									}
+									if ($value->security_code != '') {
+										$value->security_code .= ',';
+									}
+									$ticket_id = $results_meta[$k]->booking_meta_value;
+									$security_code = $results_meta[$j]->booking_meta_value;
 									
-								$ticket_id = $results_date_lock[$k]->booking_meta_value;
-								$security_code = $results_date_lock[$j]->booking_meta_value;
-									
-								$ticket_id_str .= $ticket_id.",";
-								$security_code_str .= $security_code.",";
+									$value->ticket_id .= $ticket_id;
+									$value->security_code .= $security_code;
+										
+								} 
 							}
+							$j = $j + 2;
+							$k = $k + 2;
 						}
-						$j = $j + 2;
-						$k = $k + 2;
 					}
-					$ticket_id_str = trim($ticket_id_str, ",");
-					$security_code_str = trim($security_code_str,",");
-						
-					$return_value = '<td>'.$ticket_id_str.'</td>
-									 <td>'.$security_code_str.'</td>';
-						
-					return $return_value;
-				
+					return $booking_data;
 				}
 			}
 		}
