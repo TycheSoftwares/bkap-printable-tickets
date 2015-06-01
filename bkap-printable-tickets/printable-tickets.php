@@ -92,6 +92,14 @@ function is_bkap_tickets_active() {
 				add_filter( 'bkap_view_bookings_table_columns' , array(&$this,'bkap_printable_tickets_column_name'),10,1);
 				// Add column values
 				add_filter( 'bkap_bookings_table_data' ,array(&$this,'bkap_printable_tickets_column_value'),10,1);
+				// Add data in CSV and Print files array
+				add_filter('bkap_bookings_export_data',array(&$this,'bkap_printable_export_data'),10,1);
+				// CSV file
+				add_filter('bkap_bookings_csv_data',array(&$this,'bkap_printable_csv_data'),10,2);
+				// Add filter for adding columns to the print data
+				add_filter('bkap_view_bookings_print_columns',array(&$this,'bkap_printable_tickets_add_print_columns'),10,1);
+				// Add filter for adding column data to the print data
+				add_filter('bkap_view_bookings_print_rows',array(&$this,'bkap_printable_tickets_add_print_rows'),10,2);
 				add_action('admin_init', array(&$this, 'edd_sample_register_option_print_ticket'));
 				add_action('admin_init', array(&$this, 'edd_sample_deactivate_license_print_ticket'));
 				add_action('admin_init', array(&$this, 'edd_sample_activate_license_print_ticket'));
@@ -968,6 +976,119 @@ return $rand_value;
 						}
 					}
 					return $booking_data;
+				}
+				/**************************************************************
+				 * Add ticket Id and security code in the array which contains
+				 * data being exported
+				*************************************************************/
+				function bkap_printable_export_data($report) {
+					global $wpdb;
+					foreach ($report as $key => $value) {
+						$value->ticket_id = $value->security_code = '';
+						$booking_meta = "SELECT booking_meta_value FROM `".$wpdb->prefix."booking_item_meta`
+						WHERE order_id= %d AND booking_id = %d";
+						$results_meta = $wpdb->get_results($wpdb->prepare($booking_meta,$value->order_id,$value->booking_id));
+						$j = 1;
+						$k = 0;
+						for($i = 0;$i<$value->quantity;$i++) {
+							if(!empty($results_meta)) {
+								if(array_key_exists($j,$results_meta) && array_key_exists($k,$results_meta)) {
+									if ($value->ticket_id != '') {
+										$value->ticket_id .= ';';
+									}
+									if ($value->security_code != '') {
+										$value->security_code .= ';';
+									}
+									$ticket_id = $results_meta[$k]->booking_meta_value;
+									$security_code = $results_meta[$j]->booking_meta_value;
+				
+									$value->ticket_id .= $ticket_id;
+									$value->security_code .= $security_code;
+										
+								}
+							}
+							$j = $j + 2;
+							$k = $k + 2;
+						}
+					}
+					return $report;
+				}
+				/*************************************************************
+				 * Add ticket ID and security code in the csv file
+				 ************************************************************/
+				function bkap_printable_csv_data($csv,$report) {
+					// Column Names
+					$csv = 'Order ID,Customer Name,Product Name,Check-in Date, Check-out Date,Booking Time,Quantity,Amount, Order Date, Ticket ID, Security Code';
+					$csv .= "\n";
+					foreach ($report as $key => $value) {
+						// Order ID
+						$order_id = $value->order_id;
+						// Customer Name
+						$customer_name = $value->customer_name;
+						// Product Name
+						$product_name = $value->product_name;
+						// Check-in Date
+						$checkin_date = $value->checkin_date;
+						// Checkout Date
+						$checkout_date = $value->checkout_date;
+						// Booking Time
+						$time = $value->time;
+						// Quantity & amount
+						$selected_quantity = $value->quantity;
+						$amount = $value->amount;
+						// Order Date
+						$order_date = $value->order_date;
+						// Ticket ID
+						$ticket_id = $value->ticket_id;
+						// Security code
+						$security_code = $value->security_code;
+						// CReate the data row
+						$csv .= $order_id . ',' . $customer_name . ',' . $product_name . ',"' . $checkin_date . '","' . $checkout_date . '","' . $time . '",' . $selected_quantity . ',' . $amount . ',' . $order_date . ',' . $ticket_id . ',' . $security_code;
+						$csv .= "\n";
+					}
+					return $csv;
+				}
+				/*********************************************************************
+				 * Add ticket ID and security code in the print headers
+				 ********************************************************************/
+				function bkap_printable_tickets_add_print_columns($print_data_columns) {
+					$print_data_columns = "
+					<tr>
+					<th style='border:1px solid black;padding:5px;'>".__('Order ID','woocommerce-booking')."</th>
+					<th style='border:1px solid black;padding:5px;'>".__('Customer Name','woocommerce-booking')."</th>
+					<th style='border:1px solid black;padding:5px;'>".__('Product Name','woocommerce-booking')."</th>
+					<th style='border:1px solid black;padding:5px;'>".__('Check-in Date','woocommerce-booking')."</th>
+					<th style='border:1px solid black;padding:5px;'>".__('Check-out Date','woocommerce-booking')."</th>
+					<th style='border:1px solid black;padding:5px;'>".__('Booking Time','woocommerce-booking')."</th>
+					<th style='border:1px solid black;padding:5px;'>".__('Quantity','woocommerce-booking')."</th>
+					<th style='border:1px solid black;padding:5px;'>".__('Amount','woocommerce-booking')."</th>
+					<th style='border:1px solid black;padding:5px;'>".__('Order Date','woocommerce-booking')."</th>
+					<th style='border:1px solid black;padding:5px;'>".__('Ticket ID','woocommerce-booking')."</th>
+					<th style='border:1px solid black;padding:5px;'>".__('Security Code','woocommerce-booking')."</th>
+					</tr>";
+					return $print_data_columns;
+				}
+				/**********************************************************************
+				 * Add ticket ID and security code in the rows to be printed
+				 *********************************************************************/
+				function bkap_printable_tickets_add_print_rows($print_data_row_data,$report) {
+					$print_data_row_data = '';
+					foreach ($report as $key => $value) {
+						$print_data_row_data .= "<tr>
+						<td style='border:1px solid black;padding:5px;'>".$value->order_id."</td>
+						<td style='border:1px solid black;padding:5px;'>".$value->customer_name."</td>
+						<td style='border:1px solid black;padding:5px;'>".$value->product_name."</td>
+						<td style='border:1px solid black;padding:5px;'>".$value->checkin_date."</td>
+						<td style='border:1px solid black;padding:5px;'>".$value->checkout_date."</td>
+						<td style='border:1px solid black;padding:5px;'>".$value->time."</td>
+						<td style='border:1px solid black;padding:5px;'>".$value->quantity."</td>
+						<td style='border:1px solid black;padding:5px;'>".$value->amount."</td>
+						<td style='border:1px solid black;padding:5px;'>".$value->order_date."</td>
+						<td style='border:1px solid black;padding:5px;'>".$value->ticket_id."</td>
+						<td style='border:1px solid black;padding:5px;'>".$value->security_code."</td>
+						</tr>";
+					}
+					return $print_data_row_data;
 				}
 			}
 		}
