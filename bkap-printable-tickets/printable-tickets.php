@@ -846,7 +846,7 @@ return $rand_value;
 				 * "Completed"
 				 *******************************************************/
 				function woocommerce_complete_order($order_id) {
-					global $wpdb;
+					global $wpdb, $date_formats;
 					$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
 					$message = '';
 					if(isset($saved_settings->booking_printable_ticket) && $saved_settings->booking_printable_ticket == 'on') {
@@ -862,13 +862,25 @@ return $rand_value;
 							
 							if (array_key_exists(get_option("book.item-meta-date"),$item_value) &&  $item_value[get_option("book.item-meta-date")] != "") {
 								$date = $item_value[get_option("book.item-meta-date")];
-								$hidden_date = date('j-n-Y',strtotime($date));
+							    $date_format_set = $date_formats[$saved_settings->booking_date_format];
+								$date_formatted = date_create_from_format($date_format_set, $date);
+								if (isset($date_formatted) && $date_formatted != '') {
+								    $hidden_date = date_format($date_formatted, 'j-n-Y');
+								} else {
+								    $hidden_date = '';   
+								}
 								$values['booking'][0]['date'] = $date;
 								$values['booking'][0]['hidden_date'] = $hidden_date;
 							}
 							if (array_key_exists(get_option("checkout.item-meta-date"),$item_value) && $item_value[get_option("checkout.item-meta-date")] != "") {
 								$date_checkout = $item_value[get_option("checkout.item-meta-date")];
-								$hidden_date_checkout = date('j-n-Y',strtotime($date_checkout));
+							    $date_format_set = $date_formats[$saved_settings->booking_date_format];
+								$date_formatted = date_create_from_format($date_format_set, $date_checkout);
+								if (isset($date_formatted) && $date_formatted != '') {
+								    $hidden_date_checkout = date_format($date_formatted, 'j-n-Y');
+								} else {
+								    $hidden_date_checkout = '';
+								}
 								$values['booking'][0]['date_checkout'] = $date_checkout;
 								$values['booking'][0]['hidden_date_checkout'] = $hidden_date_checkout;
 							}
