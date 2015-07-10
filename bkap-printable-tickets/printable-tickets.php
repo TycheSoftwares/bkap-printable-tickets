@@ -857,7 +857,8 @@ return $rand_value;
 						foreach($order_items as $item_key => $item_value) {	
 							$values = array();
 							$values['quantity'] = $item_value['qty'];
-							$values['product_id'] = $item_value['product_id'];
+							$duplicate_of = bkap_common::bkap_get_product_id($item_value['product_id']);
+							$values['product_id'] = $duplicate_of;
 							$values['name'] = $item_value['name'];
 							
 							if (array_key_exists(get_option("book.item-meta-date"),$item_value) &&  $item_value[get_option("book.item-meta-date")] != "") {
