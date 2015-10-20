@@ -81,6 +81,7 @@ function is_bkap_tickets_active() {
 				);
 				// Initialize settings
 				register_activation_hook( __FILE__, array(&$this, 'printable_ticket_activate'));
+				add_action( 'admin_notices', array( &$this, 'printable_ticket_error_notice' ) );
 				// used to add new settings on the product page booking box
 				add_action('bkap_after_global_holiday_field', array(&$this, 'bkap_show_printable_ticket_settings'), 10, 1);
 				add_filter('bkap_save_global_settings', array(&$this, 'bkap_save_printable_ticket_settings'), 10, 1);
@@ -104,6 +105,13 @@ function is_bkap_tickets_active() {
 				add_action('admin_init', array(&$this, 'edd_sample_deactivate_license_print_ticket'));
 				add_action('admin_init', array(&$this, 'edd_sample_activate_license_print_ticket'));
 			}
+			
+			function printable_ticket_error_notice() {
+			    if ( !is_plugin_active( 'woocommerce-booking/woocommerce-booking.php' ) ) {
+			        echo "<div class=\"error\"><p>Printable Ticket Addon for WooCommerce Booking & Appointment Plugin is enabled but not effective. It requires WooCommerce Booking and Appointment plugin in order to work.</p></div>";
+			    }
+			}
+			
 			function edd_sample_activate_license_print_ticket() {
 				// listen for our activate button to be clicked
 				if( isset( $_POST['edd_print_ticket_license_activate'] ) ) {
