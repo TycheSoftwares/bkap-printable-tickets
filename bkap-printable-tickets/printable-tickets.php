@@ -1,8 +1,8 @@
 <?php 
 /*
-Plugin Name: Printable Ticket Addon for WooCommerce Booking & Appointment Plugin
-Plugin URI: http://www.tychesoftwares.com/store/premium-plugins/bkap-printable-ticket
-Description: This addon to the Woocommerce Booking and Appointment Plugin allows you to email the tickets for the bookings to customers when an order is placed.
+Plugin Name: Printable Tickets Addon
+Plugin URI: https://www.tychesoftwares.com/store/premium-plugins/printable-tickets-addon-woocommerce-booking-appointment-plugin/
+Description: This is an addon for the WooCommerce Booking & Appointment Plugin which allows you to email the tickets for the bookings to customers when an order is placed.
 Version: 1.3
 Author: Tyche Softwares
 Author URI: http://www.tychesoftwares.com/
