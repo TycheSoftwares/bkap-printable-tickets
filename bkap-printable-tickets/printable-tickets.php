@@ -610,7 +610,7 @@ return $rand_value;
 											
 											$security_unique_no = $this->get_rand_id(10);
 											//get the content
-											$message = $this->get_template();
+											$message .= $this->get_template();
 												
 											$message = str_replace( '{{site_title}}', $site_title, $message );
 											$message = str_replace( '{{site_tagline}}', $site_tagline, $message );
