@@ -108,7 +108,7 @@ function is_bkap_tickets_active() {
 			
 			function printable_ticket_error_notice() {
 			    if ( !is_plugin_active( 'woocommerce-booking/woocommerce-booking.php' ) ) {
-			        echo "<div class=\"error\"><p>Printable Ticket Addon for WooCommerce Booking & Appointment Plugin is enabled but not effective. It requires WooCommerce Booking and Appointment plugin in order to work.</p></div>";
+			        echo "<div class=\"error\"><p>Printable Ticket Addon is enabled but not effective. It requires WooCommerce Booking and Appointment plugin in order to work.</p></div>";
 			    }
 			}
 			
