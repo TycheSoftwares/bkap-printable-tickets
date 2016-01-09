@@ -535,8 +535,8 @@ return $rand_value;
 								$site_url = get_site_url();
 								$site_title = get_option('blogname');
 								$site_tagline = get_option('blogdescription'); 
-								if(array_key_exists('booking',$values) ) {
-									$bookings = $values['booking'];
+								if(array_key_exists('bkap_booking',$values) ) {
+									$bookings = $values['bkap_booking'];
 											
 									if (array_key_exists('date',$bookings[0]) && $bookings[0]['date'] != "") {
 										$booking_date = date('d F, Y',strtotime($bookings[0]["hidden_date"]));
@@ -770,8 +770,8 @@ return $rand_value;
 								} else {
 								    $hidden_date = '';   
 								}
-								$values['booking'][0]['date'] = $date;
-								$values['booking'][0]['hidden_date'] = $hidden_date;
+								$values['bkap_booking'][0]['date'] = $date;
+								$values['bkap_booking'][0]['hidden_date'] = $hidden_date;
 							}
 							if (array_key_exists(get_option("checkout.item-meta-date"),$item_value) && $item_value[get_option("checkout.item-meta-date")] != "") {
 								$date_checkout = $item_value[get_option("checkout.item-meta-date")];
@@ -782,12 +782,12 @@ return $rand_value;
 								} else {
 								    $hidden_date_checkout = '';
 								}
-								$values['booking'][0]['date_checkout'] = $date_checkout;
-								$values['booking'][0]['hidden_date_checkout'] = $hidden_date_checkout;
+								$values['bkap_booking'][0]['date_checkout'] = $date_checkout;
+								$values['bkap_booking'][0]['hidden_date_checkout'] = $hidden_date_checkout;
 							}
 							if (array_key_exists(get_option("book.item-meta-time"),$item_value) && $item_value[get_option("book.item-meta-time")] != "") {
 								$time_slot = $item_value[get_option("book.item-meta-time")];
-								$values['booking'][0]['time_slot'] = $time_slot;
+								$values['bkap_booking'][0]['time_slot'] = $time_slot;
 							}
 							if(is_plugin_active('woocommerce-product-addons/product-addons.php')) {
 								$addons = get_product_addons($item_value['product_id']);
@@ -804,10 +804,10 @@ return $rand_value;
 							if (function_exists('is_bkap_tours_active') && is_bkap_tours_active()) {
 								$comment = bkap_get_book_t('book.item-comments');
 								if (isset($item_value[$comment])) {
-									$values['booking'][0]['comments'] = $item_value[$comment];
+									$values['bkap_booking'][0]['comments'] = $item_value[$comment];
 								}
 								else {
-									$values['booking'][0]['comments'] = '';
+									$values['bkap_booking'][0]['comments'] = '';
 								}
 							}
 							$ticket = array(apply_filters('bkap_send_ticket',$values,$order_obj));
