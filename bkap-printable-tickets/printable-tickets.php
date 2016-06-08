@@ -83,8 +83,8 @@ function is_bkap_tickets_active() {
 				register_activation_hook( __FILE__, array(&$this, 'printable_ticket_activate'));
 				add_action( 'admin_notices', array( &$this, 'printable_ticket_error_notice' ) );
 				// used to add new settings on the product page booking box
-				add_action('bkap_after_global_holiday_field', array(&$this, 'bkap_show_printable_ticket_settings'), 10, 1);
-				add_filter('bkap_save_global_settings', array(&$this, 'bkap_save_printable_ticket_settings'), 10, 1);
+			add_action('bkap_add_addon_settings', array( &$this, 'bkap_show_printable_ticket_settings' ), 10 );
+			add_action('admin_init', array( &$this, 'bkap_printable_ticket_plugin_options' ) );
 				add_filter('bkap_send_ticket', array(&$this, 'bkap_send_ticket_content'), 10, 2);
 				add_action('bkap_send_email', array(&$this,'bkap_send_ticket_email'),10,1);
 				add_action('woocommerce_order_status_completed' , array(&$this,'woocommerce_complete_order'),10,1);
@@ -308,207 +308,226 @@ function is_bkap_tickets_active() {
 				dbDelta($sql);
 			}
 			
-			function bkap_show_printable_ticket_settings($product_id) {
-				$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
-				?>
-				<tr>
-					<th>
-						<label for="booking_printable_ticket"><b><?php _e('Send tickets via email: ', 'woocommerce-booking');?></b></label>
-					</th>
-					<td>
-						<?php
-						$printable_ticket = ""; 
-						if (isset($saved_settings->booking_printable_ticket) && $saved_settings->booking_printable_ticket == 'on') {
-							$printable_ticket = 'checked';
-						}
-						?>
-						<input type="checkbox" id="booking_printable_ticket" name="booking_printable_ticket" <?php echo $printable_ticket; ?>/>
-						<img class="help_tip" width="16" height="16" data-tip="<?php _e('Allow customers to send ticket to email when an order is placed.', 'woocommerce-booking');?>" src="<?php echo plugins_url() ;?>/woocommerce/assets/images/help.png" />
-					</td>
-				</tr>
-				<script type="text/javascript">
-						jQuery("#booking_printable_ticket").change(function() {
-							if(jQuery('#booking_printable_ticket').attr('checked')) {
-								jQuery('#booking_send_ticket_method').show();
-							}
-							else {
-								jQuery('#booking_send_ticket_method').hide();
-							}
-						});
-					</script>
-				<?php 
-					$booking_send_ticket_method = 'none';
-					if (isset($saved_settings->booking_printable_ticket) && $saved_settings->booking_printable_ticket == 'on') {
-						$booking_send_ticket_method = 'show';
-					}
-					?>
-					<tr id="booking_send_ticket_method" style="display:<?=$booking_send_ticket_method?>;">
-						<th>
-							<label for="booking_send_ticket_label"><b><?php _e( 'Ticket Sending Method:', 'woocommerce-booking');?></b></label>
-						</th>
-						<td>
-							<?php 
-							$send_by_order = "";
-							if(isset($saved_settings->booking_send_ticket_method) && $saved_settings->booking_send_ticket_method == "send_by_product" ) {
-								$send_by_order = "checked";
-								$send_individually = "";
-							}
-							else {
-								$send_by_order = "";
-								$send_individually = "checked";
-							}
-							?>
-							<input type="radio" name="booking_send_ticket_method_radio" id="booking_send_ticket_method_radio" value="send_by_quantity" <?php echo $send_individually;?>><b><?php _e('Send 1 ticket per quantity&nbsp&nbsp&nbsp&nbsp&nbsp;', 'woocommerce-booking');?> </b></input>
-							<input type="radio" id="booking_send_ticket_method_radio" name="booking_send_ticket_method_radio" value="send_by_product"<?php echo $send_by_order;?>><b><?php _e('Send 1 ticket per product', 'woocommerce-booking');?> </b></input>
-							<img class="help_tip" width="16" height="16" data-tip="<?php _e('Enable Send 1 ticket per quantity to send ticket for each product and each quantity of product in order and Send 1 ticket per product to send each ticket per product in order.', 'woocommerce-booking');?>" src="<?php echo plugins_url() ;?>/woocommerce/assets/images/help.png"/>
-						</td>
-					</tr>
-				<?php 
+		function bkap_show_printable_ticket_settings() {
+		    if ( isset( $_GET[ 'action' ] ) ) {
+		        $action = $_GET[ 'action' ];
+		    } else {
+		        $action = '';
+		    }
+		    
+		    if ( 'addon_settings' == $action ) {
+		        ?>
+   				<div id="content">
+   					<form method="post" action="options.php">
+				    <?php settings_fields( 'bkap_printable_tickets_settings' ); ?>
+			        <?php do_settings_sections( 'woocommerce_booking_page-bkap_printable_tickets_settings_section' ); ?> 
+					<?php submit_button(); ?>
+   			        </form>
+   			    </div>
+                <?php 
+            }
+		}
+            
+		function bkap_printable_ticket_plugin_options() {
+		    add_settings_section (
+                'bkap_printable_tickets_settings_section',         // ID used to identify this section and with which to register options
+                __( 'Printable Tickets Addon Settings', 'printable-tickets' ),                  // Title to be displayed on the administration page
+                array( $this, 'bkap_printable_tickets_callback' ), // Callback used to render the description of the section
+                'woocommerce_booking_page-bkap_printable_tickets_settings_section'     // Page on which to add this section of options
+		    );
+		    
+		    add_settings_field (
+                'booking_printable_ticket',
+                __( 'Send tickets via email:', 'printable-tickets' ),
+                array( &$this, 'booking_printable_ticket_callback' ),
+                'woocommerce_booking_page-bkap_printable_tickets_settings_section',
+                'bkap_printable_tickets_settings_section',
+                array( __( 'Allow customers to send ticket to email when an order is placed.', 'printable-tickets' ) )
+		    );
+		    
+		    add_settings_field (
+                'booking_send_ticket_method',
+                __( 'Ticket Sending Method:', 'printable-tickets' ),
+                array( &$this, 'booking_send_ticket_method_callback' ),
+                'woocommerce_booking_page-bkap_printable_tickets_settings_section',
+                'bkap_printable_tickets_settings_section',
+                array( __( 'Enable Send 1 ticket per quantity to send ticket for each product and each quantity of product in order and Send 1 ticket per product to send each ticket per product in order.', 'printable-tickets' ) )
+		    );
+		    
+		    register_setting ( 
+                'bkap_printable_tickets_settings',
+                'booking_printable_ticket'
+		    );
+		    
+		    register_setting (
+                'bkap_printable_tickets_settings',
+                'booking_send_ticket_method'
+		    );
+		}
+			
+        function bkap_printable_tickets_callback() { }
+			
+		function booking_printable_ticket_callback( $args ) {
+		    $printable_ticket = "";
+		    if( get_option( 'booking_printable_ticket' ) == 'on' ) {
+		        $printable_ticket = 'checked';
+		    }
+		    echo '<input type="checkbox" id="booking_printable_ticket" name="booking_printable_ticket"' . $printable_ticket .'/>';
+		    $html = '<label for="booking_printable_ticket"> ' . $args[ 0 ] . '</label>';
+		    echo $html;
+		}
+
+		function booking_send_ticket_method_callback( $args ) {
+		    $send_by_order = "";
+		    if( get_option( 'booking_send_ticket_method' ) == "send_by_product" ) {
+		        $send_by_order = "checked";
+		        $send_individually = "";
+		    } else {
+		        $send_by_order = "";
+		        $send_individually = "checked";
+		    }
+
+		    ?>
+            <p><label><input type="radio" name="booking_send_ticket_method" id="booking_send_ticket_method" value="send_by_quantity" <?php echo $send_individually; ?>/><?php _e( 'Send 1 ticket per quantity&nbsp&nbsp&nbsp&nbsp&nbsp;', 'printable-tickets' ) ;?></label>
+            <label><input type="radio" name="booking_send_ticket_method" id="booking_send_ticket_method" value="send_by_product" <?php echo $send_by_order; ?>/><?php _e( 'Send 1 ticket per product', 'printable-tickets' ) ;?></label></p>
+		    <?php 
+		    $html = '<label for="booking_send_ticket_method"> ' . $args[ 0 ] . '</label>';
+		    echo $html;
+		}
+			
+		function assign_rand_value($num) { 
+			// accepts 1 - 36
+			switch($num) {
+				case "1":
+					$rand_value = "a";
+					 break;
+				case "2":
+					$rand_value = "b";
+					break;
+				case "3":
+					$rand_value = "c";
+					 break;
+				case "4":
+					$rand_value = "d";
+					break;
+				case "5":
+					$rand_value = "e";
+					break;
+				case "6":
+					$rand_value = "f";
+					break;
+				case "7":
+					$rand_value = "g";
+					break;
+				case "8":
+					$rand_value = "h";
+					break;
+				case "9":
+					$rand_value = "i";
+					break;
+				case "10":
+					$rand_value = "j";
+					break;
+				case "11":
+					$rand_value = "k";
+                    break;
+                case "12":
+                    $rand_value = "l";
+                    break;
+                case "13":
+                    $rand_value = "m";
+                    break;
+                case "14":
+                    $rand_value = "n";
+                    break;
+                case "15":
+                    $rand_value = "o";
+                    break;
+                case "16":
+                    $rand_value = "p";
+                    break;
+                case "17":
+                    $rand_value = "q";
+                    break;
+                case "18":
+                    $rand_value = "r";
+                    break;
+                case "19":
+                    $rand_value = "s";
+                    break;
+                case "20":
+                    $rand_value = "t";
+                    break;
+                case "21":
+                    $rand_value = "u";
+                    break;
+                case "22":
+                    $rand_value = "v";
+                    break;
+                case "23":
+                    $rand_value = "w";
+                    break;
+                case "24":
+                    $rand_value = "x";
+                    break;
+                case "25":
+                    $rand_value = "y";
+                    break;
+                case "26":
+                    $rand_value = "z";
+                    break;
+                case "27":
+                    $rand_value = "0";
+                    break;
+                case "28":
+                    $rand_value = "1";
+                    break;
+                case "29":
+                    $rand_value = "2";
+                    break;
+                case "30":
+                    $rand_value = "3";
+                    break;
+                case "31":
+                    $rand_value = "4";
+                    break;
+                case "32":
+                    $rand_value = "5";
+                    break;
+                case "33":
+                    $rand_value = "6";
+                    break;
+                case "34":
+                    $rand_value = "7";
+                    break;
+                case "35":
+                    $rand_value = "8";
+                    break;
+                case "36":
+                    $rand_value = "9";
+                    break;
+            }
+            return $rand_value;
+        }
+        
+        function get_rand_id($length) {
+			 if($length>0) { 
+				$rand_id="";
+				for($i=1; $i<=$length; $i++) {
+					 mt_srand((double)microtime() * 1000000);
+					$num = mt_rand(1,36);
+					$rand_id .= $this->assign_rand_value($num);
+				}
 			}
-				
-				
-				function bkap_save_printable_ticket_settings($booking_settings) {
-					if (isset($_POST['booking_printable_ticket'])) {
-						$booking_settings->booking_printable_ticket = $_POST['booking_printable_ticket'];
-					}
-					if (isset($_POST['booking_send_ticket_method_radio'])) {
-						$booking_settings->booking_send_ticket_method = $_POST['booking_send_ticket_method_radio'];
-					}
-					return $booking_settings;
-				}
-				
-				function assign_rand_value($num) { 
-					// accepts 1 - 36
-					switch($num) {
-						case "1":
-							$rand_value = "a";
-							 break;
-						case "2":
-							$rand_value = "b";
-							break;
-						case "3":
-							$rand_value = "c";
-							 break;
-						case "4":
-							$rand_value = "d";
-							break;
-						case "5":
-							$rand_value = "e";
-							break;
-						case "6":
-							$rand_value = "f";
-							break;
-						case "7":
-							$rand_value = "g";
-							break;
-						case "8":
-							$rand_value = "h";
-							break;
-						case "9":
-							$rand_value = "i";
-							break;
-						case "10":
-							$rand_value = "j";
-							break;
-						case "11":
-							$rand_value = "k";
-    break;
-    case "12":
-     $rand_value = "l";
-    break;
-    case "13":
-     $rand_value = "m";
-    break;
-    case "14":
-     $rand_value = "n";
-    break;
-    case "15":
-     $rand_value = "o";
-    break;
-    case "16":
-     $rand_value = "p";
-    break;
-    case "17":
-     $rand_value = "q";
-    break;
-    case "18":
-     $rand_value = "r";
-    break;
-    case "19":
-     $rand_value = "s";
-    break;
-    case "20":
-     $rand_value = "t";
-    break;
-    case "21":
-     $rand_value = "u";
-    break;
-    case "22":
-     $rand_value = "v";
-    break;
-    case "23":
-     $rand_value = "w";
-    break;
-    case "24":
-     $rand_value = "x";
-    break;
-    case "25":
-     $rand_value = "y";
-    break;
-    case "26":
-     $rand_value = "z";
-    break;
-    case "27":
-     $rand_value = "0";
-    break;
-    case "28":
-     $rand_value = "1";
-    break;
-    case "29":
-     $rand_value = "2";
-    break;
-    case "30":
-     $rand_value = "3";
-    break;
-    case "31":
-     $rand_value = "4";
-    break;
-    case "32":
-     $rand_value = "5";
-    break;
-    case "33":
-     $rand_value = "6";
-    break;
-    case "34":
-     $rand_value = "7";
-    break;
-    case "35":
-     $rand_value = "8";
-    break;
-    case "36":
-     $rand_value = "9";
-    break;
-  }
-return $rand_value;
-}
-				function get_rand_id($length) {
-					 if($length>0) { 
-						$rand_id="";
-						for($i=1; $i<=$length; $i++) {
-							 mt_srand((double)microtime() * 1000000);
-							$num = mt_rand(1,36);
-							$rand_id .= $this->assign_rand_value($num);
-						}
-					}
-					return $rand_id;
-				}
+			return $rand_id;
+        }
 				 
 				function bkap_send_ticket_content($values,$order) {
 					global $wpdb;
 					if($order->status == 'completed') {
 						$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
 						$booking_settings = get_post_meta( $values['product_id'], 'woocommerce_booking_settings', true);
-						if(isset($saved_settings->booking_printable_ticket) && $saved_settings->booking_printable_ticket == 'on') {
+				if( get_option( 'booking_printable_ticket' )  == 'on') {
 							if(isset($booking_settings['booking_enable_date']) && $booking_settings['booking_enable_date'] == 'on') {
 								if(array_key_exists('data',$values) ) {
 									$_product = $values['data'];
@@ -540,14 +559,14 @@ return $rand_value;
 											
 									if (array_key_exists('date',$bookings[0]) && $bookings[0]['date'] != "") {
 										$booking_date = date('d F, Y',strtotime($bookings[0]["hidden_date"]));
-										$booking = get_option("book.item-meta-date").': '.$booking_date.'<br>';
+								$booking = get_option("book_item-meta-date").': '.$booking_date.'<br>';
 									}
 									if (array_key_exists('date_checkout',$bookings[0]) && $bookings[0]['date_checkout'] != "") {
 										$booking_date_checkout = date('d F, Y',strtotime($bookings[0]["hidden_date_checkout"]));
-										$booking .= get_option("checkout.item-meta-date").': '.$booking_date_checkout.'<br>';
+								$booking .= get_option("checkout_item-meta-date").': '.$booking_date_checkout.'<br>';
 									}
 									if (array_key_exists('time_slot',$bookings[0]) && $bookings[0]['time_slot'] != "") {
-										$booking .= get_option("book.item-meta-time").': '. $bookings[0]["time_slot"].'<br>';
+								$booking .= get_option("book_item-meta-time").': '. $bookings[0]["time_slot"].'<br>';
 									}
 									$hidden_date = $bookings[0]['hidden_date'];
 									$date_query = date('Y-m-d', strtotime($hidden_date));
@@ -593,7 +612,7 @@ return $rand_value;
 								}
 								$instructions = get_post_meta($values['product_id'],'instructions');
 							
-								if(isset($saved_settings->booking_send_ticket_method) && $saved_settings->booking_send_ticket_method == 'send_by_quantity') {
+						if( get_option( 'booking_send_ticket_method' ) == 'send_by_quantity') {
 									$quantity = $values['quantity'];
 									foreach($booking_id_to_use as $b_key => $b_val) {
 										for($i=0;$i<$quantity;$i++) {
@@ -646,7 +665,7 @@ return $rand_value;
 										}
 									}
 								}
-								else if(isset($saved_settings->booking_send_ticket_method) && $saved_settings->booking_send_ticket_method == 'send_by_product') {
+						else if( get_option( 'booking_send_ticket_method' ) == 'send_by_product') {
 									$ticket_sql = "SELECT MAX(CAST(booking_meta_value AS unsigned)) AS ticket_id FROM `".$wpdb->prefix."booking_item_meta` WHERE booking_meta_key = '_ticket_id'";
 									$ticket_results = $wpdb->get_results($ticket_sql);
 									
@@ -722,7 +741,7 @@ return $rand_value;
 				
 				function bkap_send_ticket_email($ticket_content) {
 					$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
-					if(isset($saved_settings->booking_printable_ticket) && $saved_settings->booking_printable_ticket == 'on') {
+			if( get_option( 'booking_printable_ticket' ) == 'on') {
 						$i = 0;
 						$send_ticket = 'Y';
 						foreach($ticket_content as $key => $value) {
@@ -749,7 +768,7 @@ return $rand_value;
 					global $wpdb, $date_formats;
 					$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
 					$message = '';
-					if(isset($saved_settings->booking_printable_ticket) && $saved_settings->booking_printable_ticket == 'on') {
+			if( get_option( 'booking_printable_ticket' ) == 'on') {
 						$order_obj = new WC_order($order_id);
 						$order_items = $order_obj->get_items();
 						
@@ -761,8 +780,8 @@ return $rand_value;
 							$values['product_id'] = $duplicate_of;
 							$values['name'] = $item_value['name'];
 							
-							if (array_key_exists(get_option("book.item-meta-date"),$item_value) &&  $item_value[get_option("book.item-meta-date")] != "") {
-								$date = $item_value[get_option("book.item-meta-date")];
+					if (array_key_exists(get_option("book_item-meta-date"),$item_value) &&  $item_value[get_option("book_item-meta-date")] != "") {
+						$date = $item_value[get_option("book_item-meta-date")];
 							    $date_format_set = $date_formats[$saved_settings->booking_date_format];
 								$date_formatted = date_create_from_format($date_format_set, $date);
 								if (isset($date_formatted) && $date_formatted != '') {
@@ -773,8 +792,8 @@ return $rand_value;
 								$values['bkap_booking'][0]['date'] = $date;
 								$values['bkap_booking'][0]['hidden_date'] = $hidden_date;
 							}
-							if (array_key_exists(get_option("checkout.item-meta-date"),$item_value) && $item_value[get_option("checkout.item-meta-date")] != "") {
-								$date_checkout = $item_value[get_option("checkout.item-meta-date")];
+					if (array_key_exists( get_option( "checkout_item-meta-date" ),$item_value ) && $item_value[get_option("checkout_item-meta-date")] != "") {
+						$date_checkout = $item_value[get_option("checkout_item-meta-date")];
 							    $date_format_set = $date_formats[$saved_settings->booking_date_format];
 								$date_formatted = date_create_from_format($date_format_set, $date_checkout);
 								if (isset($date_formatted) && $date_formatted != '') {
@@ -785,8 +804,8 @@ return $rand_value;
 								$values['bkap_booking'][0]['date_checkout'] = $date_checkout;
 								$values['bkap_booking'][0]['hidden_date_checkout'] = $hidden_date_checkout;
 							}
-							if (array_key_exists(get_option("book.item-meta-time"),$item_value) && $item_value[get_option("book.item-meta-time")] != "") {
-								$time_slot = $item_value[get_option("book.item-meta-time")];
+					if (array_key_exists(get_option("book_item-meta-time"),$item_value) && $item_value[get_option("book_item-meta-time")] != "") {
+						$time_slot = $item_value[get_option("book_item-meta-time")];
 								$values['bkap_booking'][0]['time_slot'] = $time_slot;
 							}
 							if(is_plugin_active('woocommerce-product-addons/product-addons.php')) {
