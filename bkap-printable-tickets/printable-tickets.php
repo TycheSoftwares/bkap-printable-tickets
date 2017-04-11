@@ -524,7 +524,8 @@ function is_bkap_tickets_active() {
 				 
 				function bkap_send_ticket_content($values,$order) {
 					global $wpdb;
-					if($order->status == 'completed') {
+                    $order_status = ( version_compare( WOOCOMMERCE_VERSION, "3.0.0" ) < 0 ) ? $order->status : $order->get_status();
+					if( $order_status == 'completed') {
 						$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
 						$booking_settings = get_post_meta( $values['product_id'], 'woocommerce_booking_settings', true);
 				if( get_option( 'booking_printable_ticket' )  == 'on') {
@@ -538,14 +539,23 @@ function is_bkap_tickets_active() {
 								}
 								$product_id = $values['product_id'];
 								$from_email = get_option('admin_email');
-								$buyers_firstname = $order->billing_first_name;
-								$buyers_lastname = $order->billing_last_name;
-								$to = $order->billing_email;
+								$buyers_firstname = ( version_compare( WOOCOMMERCE_VERSION, "3.0.0" ) < 0 ) ? $order->billing_first_name : $order->get_billing_first_name();
+								$buyers_lastname = ( version_compare( WOOCOMMERCE_VERSION, "3.0.0" ) < 0 ) ? $order->billing_last_name : $order->get_billing_last_name();
+								$to = ( version_compare( WOOCOMMERCE_VERSION, "3.0.0" ) < 0 ) ? $order->billing_email : $order->get_billing_email();
 								$post_id = $values['product_id'];
 								$headers_email[] = "From:".$from_email;
 								$headers_email[] = "Content-type: text/html";
-								$completed_date = date('F j, Y',strtotime($order->completed_date));
-								$subject = "Your Ticket for Order #".$order->id." from ".$completed_date;
+								
+								$order_id = ( version_compare( WOOCOMMERCE_VERSION, "3.0.0" ) < 0 ) ? $order->id : $order->get_id();
+								if ( version_compare( WOOCOMMERCE_VERSION, "3.0.0" ) < 0 ) {
+								    $completed_date = date('F j, Y',strtotime($order->completed_date));
+								} else {
+								    $order_post = get_post( $order_id );
+								    $post_date = strtotime ( $order_post->post_date );
+								    $completed_date = date( 'Y-m-d H:i:s', $post_date );
+								}
+								
+								$subject = "Your Ticket for Order #".$order_id." from ".$completed_date;
 								
 								$logo = get_header_image();
 								$message = '';
@@ -574,7 +584,7 @@ function is_bkap_tickets_active() {
 									
 									$booking_id_query = "SELECT booking_id FROM `".$wpdb->prefix."booking_order_history`
 															WHERE order_id = %d";
-									$booking_id_results = $wpdb->get_results($wpdb->prepare($booking_id_query,$order->id));
+									$booking_id_results = $wpdb->get_results($wpdb->prepare($booking_id_query,$order_id));
 									// This is to figure out for which Item in the order are tickets to be created for.	
 									foreach ($booking_id_results as $k => $v) {
 										
@@ -649,7 +659,7 @@ function is_bkap_tickets_active() {
 											$query_ticket= "INSERT INTO `".$wpdb->prefix."booking_item_meta`
 															(order_id,booking_id,booking_meta_key,booking_meta_value)
 															VALUES (
-															'".$order->id."',
+															'".$order_id."',
 															'".$b_val->id."',
 															'_ticket_id',
 															'".$ticket_no."')";
@@ -657,7 +667,7 @@ function is_bkap_tickets_active() {
 											$query_security_code = "INSERT INTO `".$wpdb->prefix."booking_item_meta`
 															(order_id,booking_id,booking_meta_key,booking_meta_value)
 															VALUES (
-															'".$order->id."',
+															'".$order_id."',
 															'".$b_val->id."',
 															'_security_code',
 															'".$security_unique_no."')";
@@ -700,7 +710,7 @@ function is_bkap_tickets_active() {
 										$query_ticket= "INSERT INTO `".$wpdb->prefix."booking_item_meta`
 														(order_id,booking_id,booking_meta_key,booking_meta_value)
 														VALUES (
-														'".$order->id."',
+														'".$order_id."',
 														'".$b_val->id."',
 														'_ticket_id',
 														'".$ticket_no."')";
@@ -708,7 +718,7 @@ function is_bkap_tickets_active() {
 										$query_security_code = "INSERT INTO `".$wpdb->prefix."booking_item_meta`
 														(order_id,booking_id,booking_meta_key,booking_meta_value)
 														VALUES (
-														'".$order->id."',
+														'".$order_id."',
 														'".$b_val->id."',
 														'_security_code',
 														'".$security_unique_no."')";
@@ -775,59 +785,118 @@ function is_bkap_tickets_active() {
 						$ticket_content = array();
 						foreach($order_items as $item_key => $item_value) {	
 							$values = array();
-							$values['quantity'] = $item_value['qty'];
-							$duplicate_of = bkap_common::bkap_get_product_id($item_value['product_id']);
-							$values['product_id'] = $duplicate_of;
-							$values['name'] = $item_value['name'];
+							$hidden_date = '';
+						    $hidden_date_checkout = '';
+							// CRUD has been implemented since Woo 3.0.0
+							// continuing to provide backward compatibility
+							if ( version_compare( WOOCOMMERCE_VERSION, "3.0.0" ) < 0 ) {
+							    $quantity = $item_value['qty'];
+                                $product_id = $item_value[ 'product_id' ];
+                                $product_name = $item_value['name'];
 							
-					if (array_key_exists(get_option("book_item-meta-date"),$item_value) &&  $item_value[get_option("book_item-meta-date")] != "") {
-						$date = $item_value[get_option("book_item-meta-date")];
-							    $date_format_set = $date_formats[$saved_settings->booking_date_format];
-								$date_formatted = date_create_from_format($date_format_set, $date);
-								if (isset($date_formatted) && $date_formatted != '') {
-								    $hidden_date = date_format($date_formatted, 'j-n-Y');
-								} else {
-								    $hidden_date = '';   
-								}
-								$values['bkap_booking'][0]['date'] = $date;
-								$values['bkap_booking'][0]['hidden_date'] = $hidden_date;
+                                if (array_key_exists(get_option("book_item-meta-date"),$item_value) &&  $item_value[get_option("book_item-meta-date")] != "") {
+                                    $date = $item_value[get_option("book_item-meta-date")];
+                                }
+					
+                                if (array_key_exists( get_option( "checkout_item-meta-date" ),$item_value ) && $item_value[get_option("checkout_item-meta-date")] != "") {
+                                    $date_checkout = $item_value[get_option("checkout_item-meta-date")];
+                                }
+                                
+                                if (array_key_exists(get_option("book_item-meta-time"),$item_value) && $item_value[get_option("book_item-meta-time")] != "") {
+                                    $time_slot = $item_value[get_option("book_item-meta-time")];
+                                }
+
+                                if(is_plugin_active('woocommerce-product-addons/product-addons.php')) {
+                                	$addons = get_product_addons($item_value['product_id']);
+                                	foreach($addons as $key => $value) {
+                                		$addon = $value['options'];
+                                		$i = 0;
+                                		foreach($addon as $k => $v) {
+                                			$name = $v['label'];
+                                			$values['addons'][$i] = array("name" => $name, "value" => $item_value[$name]);
+                                			$i++;
+                                		}
+                                	}
+                                }
+
+                                if (function_exists('is_bkap_tours_active') && is_bkap_tours_active()) {
+    								$comment = bkap_get_book_t('book.item-comments');
+    								$tour_comments = '';
+    								if (isset($item_value[$comment])) {
+    								    $tour_comments = $item_value[$comment];
+    								}
+    							}
+							} else { // Woo 3.0.0
+							    	
+							    $quantity = $item_value->get_quantity();
+							    $product_id = $item_value->get_product_id();
+							    $product_name = $item_value->get_name();
+							    	
+							    $start_date_label = get_option( "book_item-meta-date" );
+							    $end_date_label = get_option( "checkout_item-meta-date" );
+							    $time_slot_label = get_option( "book_item-meta-time" );
+							    	
+							    $item_meta = $item_value->get_meta_data();
+							    	
+							    $comment = '';
+							    if (function_exists('is_bkap_tours_active') && is_bkap_tours_active()) {
+							        $comment = bkap_get_book_t('book.item-comments');
+							        $tour_comments = '';
+							    }
+							    foreach( $item_meta as $meta_data ) {
+							        switch ( $meta_data->key ) {
+							            case $start_date_label:
+							                $date = $meta_data->value;
+							                break;
+							            case $end_date_label:
+							                $date_checkout = $meta_data->value;
+							                break;
+							            case $time_slot_label:
+							                $time_slot = $meta_data->value;
+							                break;
+							            case $comment:
+							                $tour_comments = $meta_data->value;
+							                break;
+							            default:
+							                break;
+							        }
+							    }
 							}
-					if (array_key_exists( get_option( "checkout_item-meta-date" ),$item_value ) && $item_value[get_option("checkout_item-meta-date")] != "") {
-						$date_checkout = $item_value[get_option("checkout_item-meta-date")];
-							    $date_format_set = $date_formats[$saved_settings->booking_date_format];
-								$date_formatted = date_create_from_format($date_format_set, $date_checkout);
-								if (isset($date_formatted) && $date_formatted != '') {
-								    $hidden_date_checkout = date_format($date_formatted, 'j-n-Y');
-								} else {
-								    $hidden_date_checkout = '';
-								}
-								$values['bkap_booking'][0]['date_checkout'] = $date_checkout;
-								$values['bkap_booking'][0]['hidden_date_checkout'] = $hidden_date_checkout;
+								
+							// Populate $values
+							$values['quantity'] = $quantity;
+								
+							$duplicate_of = bkap_common::bkap_get_product_id( $product_id );
+							$values['product_id'] = $duplicate_of;
+								
+							$values['name'] = $product_name;
+								
+							if ( isset( $date ) && '' != $date ) {
+							    $date_format_set = $date_formats[ $saved_settings->booking_date_format ];
+							    $date_formatted = date_create_from_format( $date_format_set, $date );
+							    if ( isset( $date_formatted ) && $date_formatted != '' ) {
+							        $hidden_date = date_format( $date_formatted, 'j-n-Y' );
+							    }
+							    $values['bkap_booking'][0]['date'] = $date;
+							    $values['bkap_booking'][0]['hidden_date'] = $hidden_date;
 							}
-					if (array_key_exists(get_option("book_item-meta-time"),$item_value) && $item_value[get_option("book_item-meta-time")] != "") {
-						$time_slot = $item_value[get_option("book_item-meta-time")];
-								$values['bkap_booking'][0]['time_slot'] = $time_slot;
+								
+							if ( isset( $date_checkout ) && '' != $date_checkout ) {
+							    $date_format_set = $date_formats[ $saved_settings->booking_date_format ];
+							    $date_formatted = date_create_from_format( $date_format_set, $date_checkout );
+							    if ( isset( $date_formatted ) && $date_formatted != '' ) {
+							        $hidden_date_checkout = date_format($date_formatted, 'j-n-Y');
+							    }
+							    $values[ 'bkap_booking' ][0][ 'date_checkout'] = $date_checkout;
+							    $values[ 'bkap_booking' ][0][ 'hidden_date_checkout' ] = $hidden_date_checkout;
 							}
-							if(is_plugin_active('woocommerce-product-addons/product-addons.php')) {
-								$addons = get_product_addons($item_value['product_id']);
-								foreach($addons as $key => $value) {
-									$addon = $value['options'];
-									$i = 0;
-									foreach($addon as $k => $v) {
-										$name = $v['label'];
-										$values['addons'][$i] = array("name" => $name, "value" => $item_value[$name]);
-										$i++;
-									}
-								}
+								
+							if ( isset( $time_slot ) && '' != $time_slot ) {
+							    $values['bkap_booking'][0]['time_slot'] = $time_slot;
 							}
-							if (function_exists('is_bkap_tours_active') && is_bkap_tours_active()) {
-								$comment = bkap_get_book_t('book.item-comments');
-								if (isset($item_value[$comment])) {
-									$values['bkap_booking'][0]['comments'] = $item_value[$comment];
-								}
-								else {
-									$values['bkap_booking'][0]['comments'] = '';
-								}
+								
+							if ( isset( $tour_comments ) ) {
+							    $values['bkap_booking'][0]['comments'] = $tour_comments;
 							}
 							$ticket = array(apply_filters('bkap_send_ticket',$values,$order_obj));
 							$ticket_content = array_merge($ticket_content,$ticket);
