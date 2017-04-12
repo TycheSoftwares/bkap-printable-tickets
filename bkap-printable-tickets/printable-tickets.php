@@ -552,7 +552,7 @@ function is_bkap_tickets_active() {
 								} else {
 								    $order_post = get_post( $order_id );
 								    $post_date = strtotime ( $order_post->post_date );
-								    $completed_date = date( 'Y-m-d H:i:s', $post_date );
+								    $completed_date = date( 'F d, Y', $post_date );
 								}
 								
 								$subject = "Your Ticket for Order #".$order_id." from ".$completed_date;
