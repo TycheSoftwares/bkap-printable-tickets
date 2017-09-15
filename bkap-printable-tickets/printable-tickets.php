@@ -3,7 +3,7 @@
 Plugin Name: Printable Tickets Addon
 Plugin URI: https://www.tychesoftwares.com/store/premium-plugins/printable-tickets-addon-woocommerce-booking-appointment-plugin/
 Description: This is an addon for the WooCommerce Booking & Appointment Plugin which allows you to email the tickets for the bookings to customers when an order is placed.
-Version: 1.6
+Version: 1.7
 Author: Tyche Softwares
 Author URI: http://www.tychesoftwares.com/
 */
@@ -14,7 +14,7 @@ $ExampleUpdateChecker = new PluginUpdateChecker(
 	__FILE__
 );*/
 global $PrintTicketUpdateChecker;
-$PrintTickerUpdateChecker = '1.6';
+$PrintTickerUpdateChecker = '1.7';
 
 // this is the URL our updater / license checker pings. This should be the URL of the site with EDD installed
 define( 'EDD_SL_STORE_URL_PRINT_TICKET_BOOK', 'http://www.tychesoftwares.com/' ); // IMPORTANT: change the name of this constant to something unique to prevent conflicts with other plugins using this system
@@ -32,7 +32,7 @@ $license_key = trim( get_option( 'edd_sample_license_key_print_ticket_book' ) );
 
 // setup the updater
 $edd_updater = new EDD_PRINT_TICKET_BOOK_Plugin_Updater( EDD_SL_STORE_URL_PRINT_TICKET_BOOK, __FILE__, array(
-		'version' 	=> '1.6', 		// current version number
+		'version' 	=> '1.7', 		// current version number
 		'license' 	=> $license_key, 	// license key (used get_option above to retrieve from DB)
 		'item_name' => EDD_SL_ITEM_NAME_PRINT_TICKET_BOOK, 	// name of this plugin
 		'author' 	=> 'Ashok Rane'  // author of this plugin
@@ -74,38 +74,55 @@ function is_bkap_tickets_active() {
 		class printable_tickets {
 				
 		public function __construct() {
-				$this->headings = array('ticket_number' => 'Ticket# ',
-					'booking_details' => 'Booking Details',
-					'buyer' => 'Buyer',
-					'security_code' => 'Security Code'
-				);
-				// Initialize settings
-				register_activation_hook( __FILE__, array(&$this, 'printable_ticket_activate'));
-				add_action( 'admin_notices', array( &$this, 'printable_ticket_error_notice' ) );
-				// used to add new settings on the product page booking box
+		    
+		    $this->type = 'bkap_booking';
+			$this->headings = array('ticket_number' => 'Ticket# ',
+				'booking_details' => 'Booking Details',
+				'buyer' => 'Buyer',
+				'security_code' => 'Security Code'
+			);
+			// Initialize settings
+			register_activation_hook( __FILE__, array(&$this, 'printable_ticket_activate'));
+			add_action( 'admin_notices', array( &$this, 'printable_ticket_error_notice' ) );
+			
+			add_action( 'admin_init', array( &$this, 'printable_include_files' ) );
+			
+			// used to add new settings on the product page booking box
 			add_action('bkap_add_addon_settings', array( &$this, 'bkap_show_printable_ticket_settings' ), 10 );
 			add_action('admin_init', array( &$this, 'bkap_printable_ticket_plugin_options' ) );
-				add_filter('bkap_send_ticket', array(&$this, 'bkap_send_ticket_content'), 10, 2);
-				add_action('bkap_send_email', array(&$this,'bkap_send_ticket_email'),10,1);
-				add_action('woocommerce_order_status_completed' , array(&$this,'woocommerce_complete_order'),10,1);
-				add_action('bkap_add_submenu',array(&$this, 'printable_ticket_menu'));
-				// Add columns headers in the View Bookings page
-				add_filter( 'bkap_view_bookings_table_columns' , array(&$this,'bkap_printable_tickets_column_name'),10,1);
-				// Add column values
-				add_filter( 'bkap_bookings_table_data' ,array(&$this,'bkap_printable_tickets_column_value'),10,1);
-				// Add data in CSV and Print files array
-				add_filter('bkap_bookings_export_data',array(&$this,'bkap_printable_export_data'),10,1);
-				// CSV file
-				add_filter('bkap_bookings_csv_data',array(&$this,'bkap_printable_csv_data'),10,2);
-				// Add filter for adding columns to the print data
-				add_filter('bkap_view_bookings_print_columns',array(&$this,'bkap_printable_tickets_add_print_columns'),10,1);
-				// Add filter for adding column data to the print data
-				add_filter('bkap_view_bookings_print_rows',array(&$this,'bkap_printable_tickets_add_print_rows'),10,2);
-				add_action('admin_init', array(&$this, 'edd_sample_register_option_print_ticket'));
-				add_action('admin_init', array(&$this, 'edd_sample_deactivate_license_print_ticket'));
-				add_action('admin_init', array(&$this, 'edd_sample_activate_license_print_ticket'));
-			}
+			add_filter('bkap_send_ticket', array(&$this, 'bkap_send_ticket_content'), 10, 2);
+			add_action('bkap_send_email', array(&$this,'bkap_send_ticket_email'),10,1);
+			add_action('woocommerce_order_status_completed' , array(&$this,'woocommerce_complete_order'),10,1);
+			add_action('bkap_add_submenu',array(&$this, 'printable_ticket_menu'));
+			// Add columns headers in the View Bookings page
+			add_filter( 'bkap_view_bookings_table_columns' , array(&$this,'bkap_printable_tickets_column_name'),10,1);
+			// Add column values
+			add_filter( 'bkap_bookings_table_data' ,array(&$this,'bkap_printable_tickets_column_value'),10,1);
+			// Add data in CSV and Print files array
+			add_filter('bkap_bookings_export_data',array(&$this,'bkap_printable_export_data'),10,1);
+			// CSV file
+			add_filter('bkap_bookings_csv_data',array(&$this,'bkap_printable_csv_data'),10,2);
+			// Add filter for adding columns to the print data
+			add_filter('bkap_view_bookings_print_columns',array(&$this,'bkap_printable_tickets_add_print_columns'),10,1);
+			// Add filter for adding column data to the print data
+			add_filter('bkap_view_bookings_print_rows',array(&$this,'bkap_printable_tickets_add_print_rows'),10,2);
+			add_action('admin_init', array(&$this, 'edd_sample_register_option_print_ticket'));
+			add_action('admin_init', array(&$this, 'edd_sample_deactivate_license_print_ticket'));
+			add_action('admin_init', array(&$this, 'edd_sample_activate_license_print_ticket'));
 			
+			// Add Printable Ticket Columns in the new View Bookings page
+			add_filter( 'manage_edit-' . $this->type . '_columns', array( &$this, 'bkap_printable_edit_columns' ), 20, 1 );
+			add_action( 'manage_' . $this->type . '_posts_custom_column', array( &$this, 'bkap_printable_custom_columns' ), 20, 1 );
+		}
+		
+		/**
+		 * Include the Update file
+		 * @since 1.7
+		 */
+		function printable_include_files() {
+		    include_once( 'update-functions.php' );
+		}
+		
 			function printable_ticket_error_notice() {
 			    if ( !is_plugin_active( 'woocommerce-booking/woocommerce-booking.php' ) ) {
 			        echo "<div class=\"error\"><p>Printable Ticket Addon is enabled but not effective. It requires WooCommerce Booking and Appointment plugin in order to work.</p></div>";
@@ -290,7 +307,7 @@ function is_bkap_tickets_active() {
 									}
 			
 			function printable_ticket_menu() {
-				$page = add_submenu_page('booking_settings', __( 'Activate Printable Ticket License', 'woocommerce-booking' ), __( 'Activate Printable Ticket License', 'woocommerce-booking' ), 'manage_woocommerce', 'print_ticket_license_page', array(&$this, 'edd_sample_license_page_print_ticket' ));
+				$page = add_submenu_page('edit.php?post_type=bkap_booking', __( 'Activate Printable Ticket License', 'woocommerce-booking' ), __( 'Activate Printable Ticket License', 'woocommerce-booking' ), 'manage_woocommerce', 'print_ticket_license_page', array(&$this, 'edd_sample_license_page_print_ticket' ));
 			}
 									
 			function printable_ticket_activate() {
@@ -318,6 +335,7 @@ function is_bkap_tickets_active() {
 		    if ( 'addon_settings' == $action ) {
 		        ?>
    				<div id="content">
+   					<?php do_action( 'printable_notes' );?>
    					<form method="post" action="options.php">
 				    <?php settings_fields( 'bkap_printable_tickets_settings' ); ?>
 			        <?php do_settings_sections( 'woocommerce_booking_page-bkap_printable_tickets_settings_section' ); ?> 
@@ -524,6 +542,9 @@ function is_bkap_tickets_active() {
 				 
 				function bkap_send_ticket_content($values,$order) {
 					global $wpdb;
+					
+					$ticket = array();
+					
                     $order_status = ( version_compare( WOOCOMMERCE_VERSION, "3.0.0" ) < 0 ) ? $order->status : $order->get_status();
 					if( $order_status == 'completed') {
 						$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
@@ -533,8 +554,7 @@ function is_bkap_tickets_active() {
 								if(array_key_exists('data',$values) ) {
 									$_product = $values['data'];
 									$product_name = $_product->get_title();
-								}
-								else {
+								} else {
 									$product_name = $values['name'];
 								}
 								$product_id = $values['product_id'];
@@ -547,196 +567,262 @@ function is_bkap_tickets_active() {
 								$headers_email[] = "Content-type: text/html";
 								
 								$order_id = ( version_compare( WOOCOMMERCE_VERSION, "3.0.0" ) < 0 ) ? $order->id : $order->get_id();
-								if ( version_compare( WOOCOMMERCE_VERSION, "3.0.0" ) < 0 ) {
-								    $completed_date = date('F j, Y',strtotime($order->completed_date));
-								} else {
-								    $order_post = get_post( $order_id );
-								    $post_date = strtotime ( $order_post->post_date );
-								    $completed_date = date( 'F d, Y', $post_date );
-								}
 								
-								$subject = "Your Ticket for Order #".$order_id." from ".$completed_date;
+								// get the booking post ID
+								$item_id = ( isset( $values[ 'item_id' ] ) ) ? $values[ 'item_id' ] : 0;
 								
-								$logo = get_header_image();
-								$message = '';
-								$booking = '';
-								$addon = '';
-								$site_url = get_site_url();
-								$site_title = get_option('blogname');
-								$site_tagline = get_option('blogdescription'); 
-								if(array_key_exists('bkap_booking',$values) ) {
-									$bookings = $values['bkap_booking'];
-											
-									if (array_key_exists('date',$bookings[0]) && $bookings[0]['date'] != "") {
-										$booking_date = date('d F, Y',strtotime($bookings[0]["hidden_date"]));
-								$booking = get_option("book_item-meta-date").': '.$booking_date.'<br>';
-									}
-									if (array_key_exists('date_checkout',$bookings[0]) && $bookings[0]['date_checkout'] != "") {
-										$booking_date_checkout = date('d F, Y',strtotime($bookings[0]["hidden_date_checkout"]));
-								$booking .= get_option("checkout_item-meta-date").': '.$booking_date_checkout.'<br>';
-									}
-									if (array_key_exists('time_slot',$bookings[0]) && $bookings[0]['time_slot'] != "") {
-								$booking .= get_option("book_item-meta-time").': '. $bookings[0]["time_slot"].'<br>';
-									}
-									$hidden_date = $bookings[0]['hidden_date'];
-									$date_query = date('Y-m-d', strtotime($hidden_date));
-									$booking_id = array();
-									
-									$booking_id_query = "SELECT booking_id FROM `".$wpdb->prefix."booking_order_history`
-															WHERE order_id = %d";
-									$booking_id_results = $wpdb->get_results($wpdb->prepare($booking_id_query,$order_id));
-									// This is to figure out for which Item in the order are tickets to be created for.	
-									foreach ($booking_id_results as $k => $v) {
-										
-										$booking_id_to_use_query = "SELECT id FROM `".$wpdb->prefix."booking_history`
-																	WHERE id = %d
-																	AND post_id = %d";
-								
-										$booking_id_to_use = $wpdb->get_results($wpdb->prepare($booking_id_to_use_query,$v->booking_id,$product_id));
-									
-										if (count($booking_id_to_use) > 0) {
-											break;
-										}
-									}
-								}
-								if (function_exists('is_bkap_tours_active') && is_bkap_tours_active()) {
-									if(isset($booking_settings['show_tour_operator']) && $booking_settings['show_tour_operator'] == 'on') {
-										$booking_tour_operator = $booking_settings["booking_tour_operator"];
-										$user = get_userdata( $booking_tour_operator );
-										if(isset($user->user_login)) {
-											$booking.= 'Tour Operator: '.$user->user_login.'<br>';
-										}
-										if(isset($booking_settings['booking_show_comment']) && $booking_settings['booking_show_comment'] == 'on') {
-											$booking.= bkap_get_book_t('book.item-comments').': '.$bookings[0]['comments'].'<br>';
-										}
-									}
-								}
-							
-								$f = 0;
-								if(is_plugin_active('woocommerce-product-addons/product-addons.php')) {
-									$addons = $values['addons'];
-									foreach($addons as $key ) {
-										$addon .= $addons[$f]["name"].': '.$addons[$f]["value"].'<br>';
-										$f++;		
-									}
-								}
-								$instructions = get_post_meta($values['product_id'],'instructions');
-							
-						if( get_option( 'booking_send_ticket_method' ) == 'send_by_quantity') {
-									$quantity = $values['quantity'];
-									foreach($booking_id_to_use as $b_key => $b_val) {
-										for($i=0;$i<$quantity;$i++) {
-											$ticket_sql = "SELECT MAX(CAST(booking_meta_value AS unsigned)) AS ticket_id FROM `".$wpdb->prefix."booking_item_meta` WHERE booking_meta_key = '_ticket_id'";
-											
-											$ticket_results = $wpdb->get_results($ticket_sql);
-											$ticket_no = $ticket_results[0]->ticket_id;
-											if($ticket_no == '') {
-												$ticket_no = 1;
-											}
-											else {
-												$ticket_no = $ticket_no + 1;
-											}
-											
-											$security_unique_no = $this->get_rand_id(10);
-											//get the content
-											$message .= $this->get_template();
-												
-											$message = str_replace( '{{site_title}}', $site_title, $message );
-											$message = str_replace( '{{site_tagline}}', $site_tagline, $message );
-											$message = str_replace( '{{product_name}}', $product_name, $message );
-											$message = str_replace( '{{heading_ticket_number}}', $this->headings[ "ticket_number" ], $message );
-											$message = str_replace( '{{ticket_no}}', $ticket_no, $message );
-											$message = str_replace( '{{headings_booking_details}}', $this->headings[ "booking_details" ], $message );
-											$message = str_replace( '{{booking}}', $booking, $message );
-											$message = str_replace( '{{addon}}', $addon, $message );
-											$message = str_replace( '{{headings_buyer}}', $this->headings[ "buyer" ], $message );
-											$message = str_replace( '{{buyers_firstname}}', $buyers_firstname, $message );
-											$message = str_replace( '{{buyers_lastname}}', $buyers_lastname, $message );
-											$message = str_replace( '{{headings_security_code}}', $this->headings[ "security_code" ], $message );
-											$message = str_replace( '{{security_unique_no}}', $security_unique_no, $message );
-											$message = str_replace( '{{site_url}}', $site_url, $message );
-																		
-											$query_ticket= "INSERT INTO `".$wpdb->prefix."booking_item_meta`
-															(order_id,booking_id,booking_meta_key,booking_meta_value)
-															VALUES (
-															'".$order_id."',
-															'".$b_val->id."',
-															'_ticket_id',
-															'".$ticket_no."')";
-															$wpdb->query($query_ticket );
-											$query_security_code = "INSERT INTO `".$wpdb->prefix."booking_item_meta`
-															(order_id,booking_id,booking_meta_key,booking_meta_value)
-															VALUES (
-															'".$order_id."',
-															'".$b_val->id."',
-															'_security_code',
-															'".$security_unique_no."')";
-											$wpdb->query($query_security_code );
-										}
-									}
-								}
-						else if( get_option( 'booking_send_ticket_method' ) == 'send_by_product') {
-									$ticket_sql = "SELECT MAX(CAST(booking_meta_value AS unsigned)) AS ticket_id FROM `".$wpdb->prefix."booking_item_meta` WHERE booking_meta_key = '_ticket_id'";
-									$ticket_results = $wpdb->get_results($ticket_sql);
-									
-									$ticket_no = $ticket_results[0]->ticket_id;
-								
-									if($ticket_no == '') {
-										$ticket_no = 1;
-									}
-									else {
-										$ticket_no = $ticket_no + 1;
-									}
-									$security_unique_no = $this->get_rand_id(10);
-									//get the content
-									$message = $this->get_template();
-									
-									$message = str_replace( '{{site_title}}', $site_title, $message );
-									$message = str_replace( '{{site_tagline}}', $site_tagline, $message );
-									$message = str_replace( '{{product_name}}', $product_name, $message ); 
-									$message = str_replace( '{{heading_ticket_number}}', $this->headings[ "ticket_number" ], $message );
-									$message = str_replace( '{{ticket_no}}', $ticket_no, $message );
-									$message = str_replace( '{{headings_booking_details}}', $this->headings[ "booking_details" ], $message );
-									$message = str_replace( '{{booking}}', $booking, $message );
-									$message = str_replace( '{{addon}}', $addon, $message );
-									$message = str_replace( '{{headings_buyer}}', $this->headings[ "buyer" ], $message );
-									$message = str_replace( '{{buyers_firstname}}', $buyers_firstname, $message );
-									$message = str_replace( '{{buyers_lastname}}', $buyers_lastname, $message );
-									$message = str_replace( '{{headings_security_code}}', $this->headings[ "security_code" ], $message );
-									$message = str_replace( '{{security_unique_no}}', $security_unique_no, $message );
-									$message = str_replace( '{{site_url}}', $site_url, $message );
-									$j = 0;
-									foreach($booking_id_to_use as $b_key => $b_val) {
-										$query_ticket= "INSERT INTO `".$wpdb->prefix."booking_item_meta`
-														(order_id,booking_id,booking_meta_key,booking_meta_value)
-														VALUES (
-														'".$order_id."',
-														'".$b_val->id."',
-														'_ticket_id',
-														'".$ticket_no."')";
-														$wpdb->query( $query_ticket );
-										$query_security_code = "INSERT INTO `".$wpdb->prefix."booking_item_meta`
-														(order_id,booking_id,booking_meta_key,booking_meta_value)
-														VALUES (
-														'".$order_id."',
-														'".$b_val->id."',
-														'_security_code',
-														'".$security_unique_no."')";
-										$wpdb->query(  $query_security_code );
-										$j++;
-									}
-								}
-								$ticket[] = array('to'=>$to, 'subject' => $subject, 'message' => $message, 'headers' => $headers_email);
-							}
-							else {
-								$ticket = array();
+								if( $item_id > 0 ) {
+								    $bkap_post_id = bkap_common::get_booking_id( $item_id );
+								    
+    								if ( version_compare( WOOCOMMERCE_VERSION, "3.0.0" ) < 0 ) {
+    								    $completed_date = date('F j, Y',strtotime($order->completed_date));
+    								} else {
+    								    $order_post = get_post( $order_id );
+    								    $post_date = strtotime ( $order_post->post_date );
+    								    $completed_date = date( 'F d, Y', $post_date );
+    								}
+    								
+    								$subject = "Your Ticket for Order #".$order_id." from ".$completed_date;
+    								
+    								$logo = get_header_image();
+    								$message = '';
+    								$booking = '';
+    								$addon = '';
+    								$site_url = get_site_url();
+    								$site_title = get_option('blogname');
+    								$site_tagline = get_option('blogdescription'); 
+    								if(array_key_exists('bkap_booking',$values) ) {
+    									$bookings = $values['bkap_booking'];
+    											
+    									if (array_key_exists('date',$bookings[0]) && $bookings[0]['date'] != "") {
+    										$booking_date = date('d F, Y',strtotime($bookings[0]["hidden_date"]));
+    								$booking = get_option("book_item-meta-date").': '.$booking_date.'<br>';
+    									}
+    									if (array_key_exists('date_checkout',$bookings[0]) && $bookings[0]['date_checkout'] != "") {
+    										$booking_date_checkout = date('d F, Y',strtotime($bookings[0]["hidden_date_checkout"]));
+    								$booking .= get_option("checkout_item-meta-date").': '.$booking_date_checkout.'<br>';
+    									}
+    									if (array_key_exists('time_slot',$bookings[0]) && $bookings[0]['time_slot'] != "") {
+    								$booking .= get_option("book_item-meta-time").': '. $bookings[0]["time_slot"].'<br>';
+    									}
+    									$hidden_date = $bookings[0]['hidden_date'];
+    									$date_query = date('Y-m-d', strtotime($hidden_date));
+    									$booking_id = array();
+    									
+    									$booking_id_query = "SELECT booking_id FROM `".$wpdb->prefix."booking_order_history`
+    															WHERE order_id = %d";
+    									$booking_id_results = $wpdb->get_results($wpdb->prepare($booking_id_query,$order_id));
+    									// This is to figure out for which Item in the order are tickets to be created for.	
+    									foreach ($booking_id_results as $k => $v) {
+    										
+    										$booking_id_to_use_query = "SELECT id FROM `".$wpdb->prefix."booking_history`
+    																	WHERE id = %d
+    																	AND post_id = %d";
+    								
+    										$booking_id_to_use = $wpdb->get_results($wpdb->prepare($booking_id_to_use_query,$v->booking_id,$product_id));
+    									
+    										if (count($booking_id_to_use) > 0) {
+    											break;
+    										}
+    									}
+    								}
+    								if (function_exists('is_bkap_tours_active') && is_bkap_tours_active()) {
+    									if(isset($booking_settings['show_tour_operator']) && $booking_settings['show_tour_operator'] == 'on') {
+    										$booking_tour_operator = $booking_settings["booking_tour_operator"];
+    										$user = get_userdata( $booking_tour_operator );
+    										if(isset($user->user_login)) {
+    											$booking.= 'Tour Operator: '.$user->user_login.'<br>';
+    										}
+    										if(isset($booking_settings['booking_show_comment']) && $booking_settings['booking_show_comment'] == 'on') {
+    											$booking.= bkap_get_book_t('book.item-comments').': '.$bookings[0]['comments'].'<br>';
+    										}
+    									}
+    								}
+    							
+    								$f = 0;
+    								if(is_plugin_active('woocommerce-product-addons/product-addons.php')) {
+    									$addons = $values['addons'];
+    									foreach($addons as $key ) {
+    										$addon .= $addons[$f]["name"].': '.$addons[$f]["value"].'<br>';
+    										$f++;		
+    									}
+    								}
+    								$instructions = get_post_meta($values['product_id'],'instructions');
+    							
+                                    if( get_option( 'booking_send_ticket_method' ) == 'send_by_quantity') {
+    									$quantity = $values['quantity'];
+    									foreach($booking_id_to_use as $b_key => $b_val) {
+    										for($i=0;$i<$quantity;$i++) {
+    											$ticket_data = $this->create_ticket_details();
+                    						    $ticket_no = $ticket_data[ 'ticket_id' ];
+                    						    $security_unique_no = $ticket_data[ 'security_code' ];
+    						
+    											//get the content
+    											$message .= $this->get_template();
+    												
+    											$message = str_replace( '{{site_title}}', $site_title, $message );
+    											$message = str_replace( '{{site_tagline}}', $site_tagline, $message );
+    											$message = str_replace( '{{product_name}}', $product_name, $message );
+    											$message = str_replace( '{{heading_ticket_number}}', $this->headings[ "ticket_number" ], $message );
+    											$message = str_replace( '{{ticket_no}}', $ticket_no, $message );
+    											$message = str_replace( '{{headings_booking_details}}', $this->headings[ "booking_details" ], $message );
+    											$message = str_replace( '{{booking}}', $booking, $message );
+    											$message = str_replace( '{{addon}}', $addon, $message );
+    											$message = str_replace( '{{headings_buyer}}', $this->headings[ "buyer" ], $message );
+    											$message = str_replace( '{{buyers_firstname}}', $buyers_firstname, $message );
+    											$message = str_replace( '{{buyers_lastname}}', $buyers_lastname, $message );
+    											$message = str_replace( '{{headings_security_code}}', $this->headings[ "security_code" ], $message );
+    											$message = str_replace( '{{security_unique_no}}', $security_unique_no, $message );
+    											$message = str_replace( '{{site_url}}', $site_url, $message );
+    																		
+    											$query_ticket= "INSERT INTO `".$wpdb->prefix."booking_item_meta`
+    															(order_id,booking_id,booking_meta_key,booking_meta_value)
+    															VALUES (
+    															'".$order_id."',
+    															'".$b_val->id."',
+    															'_ticket_id',
+    															'".$ticket_no."')";
+    															$wpdb->query($query_ticket );
+    											$query_security_code = "INSERT INTO `".$wpdb->prefix."booking_item_meta`
+    															(order_id,booking_id,booking_meta_key,booking_meta_value)
+    															VALUES (
+    															'".$order_id."',
+    															'".$b_val->id."',
+    															'_security_code',
+    															'".$security_unique_no."')";
+    											$wpdb->query($query_security_code );
+    											
+    											// check if a record is already present
+    											$existing_ticket = get_post_meta( $bkap_post_id, '_bkap_ticket_id', true );
+    											
+    											if ( is_array( $existing_ticket ) && count( $existing_ticket ) > 0 ) {
+    											    if ( ! in_array( $ticket_no, $existing_ticket ) )
+    											        array_push( $existing_ticket, $ticket_no );
+    											} else {
+    											    $existing_ticket = array( $ticket_no );
+    											}
+    											
+    											$existing_codes = get_post_meta( $bkap_post_id, '_bkap_security_code', true );
+    											
+    											if( is_array( $existing_codes ) && count( $existing_codes ) > 0 ) {
+    											    if ( ! in_array( $security_unique_no, $existing_codes ) )
+    											        array_push( $existing_codes, $security_unique_no );
+    											} else {
+    											    $existing_codes = array( $security_unique_no );
+    											}
+    											
+    											update_post_meta( $bkap_post_id, '_bkap_ticket_id', $existing_ticket );
+    											update_post_meta( $bkap_post_id, '_bkap_security_code', $existing_codes );
+    										}
+    									}
+    								} else if( get_option( 'booking_send_ticket_method' ) == 'send_by_product') {
+    									$ticket_data = $this->create_ticket_details();
+            						    $ticket_no = $ticket_data[ 'ticket_id' ];
+            						    $security_unique_no = $ticket_data[ 'security_code' ];
+            						
+    									//get the content
+    									$message = $this->get_template();
+    									
+    									$message = str_replace( '{{site_title}}', $site_title, $message );
+    									$message = str_replace( '{{site_tagline}}', $site_tagline, $message );
+    									$message = str_replace( '{{product_name}}', $product_name, $message ); 
+    									$message = str_replace( '{{heading_ticket_number}}', $this->headings[ "ticket_number" ], $message );
+    									$message = str_replace( '{{ticket_no}}', $ticket_no, $message );
+    									$message = str_replace( '{{headings_booking_details}}', $this->headings[ "booking_details" ], $message );
+    									$message = str_replace( '{{booking}}', $booking, $message );
+    									$message = str_replace( '{{addon}}', $addon, $message );
+    									$message = str_replace( '{{headings_buyer}}', $this->headings[ "buyer" ], $message );
+    									$message = str_replace( '{{buyers_firstname}}', $buyers_firstname, $message );
+    									$message = str_replace( '{{buyers_lastname}}', $buyers_lastname, $message );
+    									$message = str_replace( '{{headings_security_code}}', $this->headings[ "security_code" ], $message );
+    									$message = str_replace( '{{security_unique_no}}', $security_unique_no, $message );
+    									$message = str_replace( '{{site_url}}', $site_url, $message );
+    									$j = 0;
+    									foreach($booking_id_to_use as $b_key => $b_val) {
+    										$query_ticket= "INSERT INTO `".$wpdb->prefix."booking_item_meta`
+    														(order_id,booking_id,booking_meta_key,booking_meta_value)
+    														VALUES (
+    														'".$order_id."',
+    														'".$b_val->id."',
+    														'_ticket_id',
+    														'".$ticket_no."')";
+    														$wpdb->query( $query_ticket );
+    										$query_security_code = "INSERT INTO `".$wpdb->prefix."booking_item_meta`
+    														(order_id,booking_id,booking_meta_key,booking_meta_value)
+    														VALUES (
+    														'".$order_id."',
+    														'".$b_val->id."',
+    														'_security_code',
+    														'".$security_unique_no."')";
+    										$wpdb->query(  $query_security_code );
+    										$j++;
+    									}
+    									
+    									// check if a record is already present
+    									$existing_ticket = get_post_meta( $bkap_post_id, '_bkap_ticket_id', true );
+    										
+    									if ( is_array( $existing_ticket ) && count( $existing_ticket ) > 0 ) {
+    									    if ( ! in_array( $ticket_no, $existing_ticket ) )
+    									        array_push( $existing_ticket, $ticket_no );
+    									} else {
+    									    $existing_ticket = array( $ticket_no );
+    									}
+    										
+    									$existing_codes = get_post_meta( $bkap_post_id, '_bkap_security_code', true );
+    										
+    									if( is_array( $existing_codes ) && count( $existing_codes ) > 0 ) {
+    									    if ( ! in_array( $security_unique_no, $existing_codes ) )
+    									        array_push( $existing_codes, $security_unique_no );
+    									} else {
+    									    $existing_codes = array( $security_unique_no );
+    									}
+    										
+    									update_post_meta( $bkap_post_id, '_bkap_ticket_id', $existing_ticket );
+    									update_post_meta( $bkap_post_id, '_bkap_security_code', $existing_codes );
+    								}
+    								$ticket[] = array('to'=>$to, 'subject' => $subject, 'message' => $message, 'headers' => $headers_email);
+    							}
 							}
 						}
 					}
-					else {
-						$ticket = array();
-					}
+					
 					return $ticket;
+				}
+
+				/**
+				 * Generates the Ticket ID and unique Security Code
+				 * and retrns the same to be used in the tickset sent
+				 * to the user.
+				 * @return array:number string
+				 * @since 1.7
+				 */
+				function create_ticket_details() {
+				
+				    global $wpdb;
+				
+				    $last_count = get_option( '_bkap_last_ticket_id' );
+				
+				    if ( isset( $last_count ) && is_numeric( $last_count ) ) {
+				    } else {
+				
+				        $ticket_sql = "SELECT MAX(CAST(booking_meta_value AS unsigned)) AS ticket_id FROM `".$wpdb->prefix."booking_item_meta` WHERE booking_meta_key = '_ticket_id'";
+				         
+				        $ticket_results = $wpdb->get_results($ticket_sql);
+				        $last_count = $ticket_results[0]->ticket_id;
+				        if($last_count == '') {
+				            $last_count = 1;
+				        }
+				         
+				    }
+				    $ticket_no = $last_count + 1;
+				
+				    $security_unique_no = $this->get_rand_id(10);
+				
+				    update_option( '_bkap_last_ticket_id', $ticket_no );
+				
+				    return array( 'ticket_id' => $ticket_no,
+				        'security_code' => $security_unique_no
+				    );
 				}
 				
 				/**********************************************************
@@ -864,6 +950,7 @@ function is_bkap_tickets_active() {
 							}
 								
 							// Populate $values
+							$values[ 'item_id' ] = $item_key;
 							$values['quantity'] = $quantity;
 								
 							$duplicate_of = bkap_common::bkap_get_product_id( $product_id );
@@ -1018,55 +1105,153 @@ function is_bkap_tickets_active() {
 				 * Add ticket ID and security code in the csv file
 				 ************************************************************/
 				function bkap_printable_csv_data($csv,$report) {
-					// Column Names
-					$csv = 'Order ID,Customer Name,Product Name,Check-in Date, Check-out Date,Booking Time,Quantity,Amount, Order Date, Ticket ID, Security Code';
-					$csv .= "\n";
-					foreach ($report as $key => $value) {
-						// Order ID
-						$order_id = $value->order_id;
-						// Customer Name
-						$customer_name = $value->customer_name;
-						// Product Name
-						$product_name = $value->product_name;
-						// Check-in Date
-						$checkin_date = $value->checkin_date;
-						// Checkout Date
-						$checkout_date = $value->checkout_date;
-						// Booking Time
-						$time = $value->time;
-						// Quantity & amount
-						$selected_quantity = $value->quantity;
-						$amount = $value->amount;
-						// Order Date
-						$order_date = $value->order_date;
-						// Ticket ID
-						$ticket_id = $value->ticket_id;
-						// Security code
-						$security_code = $value->security_code;
-						// CReate the data row
-						$csv .= $order_id . ',' . $customer_name . ',' . $product_name . ',"' . $checkin_date . '","' . $checkout_date . '","' . $time . '",' . $selected_quantity . ',' . $amount . ',' . $order_date . ',' . $ticket_id . ',' . $security_code;
-						$csv .= "\n";
-					}
+				    
+				    if ( isset( $_REQUEST[ 'post_type' ] ) && $_REQUEST[ 'post_type' ] === $this->type ) {
+				    
+				        // Column Names
+				        $csv = 'Status, ID, Booked Product, Booked By, Order ID, Start Date, End Date, Quantity, Amount, Ticket ID, Security Code';
+				        $csv .= "\n";
+				    
+				        foreach ( $report as $key => $value ) {
+				            // Status
+				            $status_raw = $value->get_status();
+				            $status = bkap_common::get_mapped_status( $status_raw );
+				            	
+				            // ID
+				            $booking_id = $value->id;
+				            	
+				            // Booked Product
+				            $product = $value->get_product();
+				            $product_name = "";
+				            if ( $product !== null ) {
+				                $product_name = $product->get_title();
+				            }
+				            	
+				            // Booked By
+				            $customer = $value->get_customer();
+				            $booked_by = $customer->name;
+				            	
+				            // Order ID
+				            $order_id = $value->order_id;
+				            	
+				            // Start Date
+				            $start_date = $value->get_start_date();
+				            if ( $value->get_start_time() !== '' ) {
+				                $start_date .= " - " . $value->get_start_time();
+				            }
+				            	
+				            // End Date
+				            $end_date = "";
+				            if ( $value->get_end_date() !== '' ) {
+				                $end_date = $value->get_end_date();
+				                	
+				                if ( $value->get_end_time() !== '' ) {
+				                    $end_date .= " - " . $value->get_end_time();
+				                }
+				            }
+				            	
+				            // Quantity
+				            $quantity= $value->get_quantity();
+				            	
+				            // Amount
+				            $amount = $value->get_cost();
+				            $final_amt = $amount * $quantity;
+				            	
+				            if ( absint( $order_id ) > 0 && false !== get_post_status( $order_id ) ) {
+				                $the_order = wc_get_order( $order_id );
+				                $currency = ( version_compare( WOOCOMMERCE_VERSION, "3.0.0" ) < 0 ) ? $the_order->get_order_currency() : $the_order->get_currency();
+				            } else {
+				                // get default woocommerce currency
+				                $currency = get_woocommerce_currency();
+				            }
+				            $currency_symbol = get_woocommerce_currency_symbol( $currency );
+				            	
+				            $final_amt = html_entity_decode( $currency_symbol ) . " " . $final_amt;
+				            	
+				            // ticket ID
+				            $ticket_array = get_post_meta( $value->id, '_bkap_ticket_id', true );
+				            $ticket_ids = ( is_array( $ticket_array ) ) ? implode( ',', $ticket_array ) : '';
+				             
+				            // security code
+				            $security_array = get_post_meta( $value->id, '_bkap_security_code', true );
+				            $security_codes = is_array( $security_array ) ? implode( ',', $security_array ) : '';
+				             
+				            // Create the data row
+				            $csv .= $status . ',' . $booking_id . ',' . $product_name . ',' . $booked_by . ',' . $order_id . ',"' . $start_date . '","' . $end_date . '",' . $quantity . ',' . $final_amt . ',"' . $ticket_ids . '","' . $security_codes . '"';
+				            $csv .= "\n";
+				        }
+				    
+				    } else {
+    					// Column Names
+    					$csv = 'Order ID,Customer Name,Product Name,Check-in Date, Check-out Date,Booking Time,Quantity,Amount, Order Date, Ticket ID, Security Code';
+    					$csv .= "\n";
+    					foreach ($report as $key => $value) {
+    						// Order ID
+    						$order_id = $value->order_id;
+    						// Customer Name
+    						$customer_name = $value->customer_name;
+    						// Product Name
+    						$product_name = $value->product_name;
+    						// Check-in Date
+    						$checkin_date = $value->checkin_date;
+    						// Checkout Date
+    						$checkout_date = $value->checkout_date;
+    						// Booking Time
+    						$time = $value->time;
+    						// Quantity & amount
+    						$selected_quantity = $value->quantity;
+    						$amount = $value->amount;
+    						// Order Date
+    						$order_date = $value->order_date;
+    						// Ticket ID
+    						$ticket_id = $value->ticket_id;
+    						// Security code
+    						$security_code = $value->security_code;
+    						// CReate the data row
+    						$csv .= $order_id . ',' . $customer_name . ',' . $product_name . ',"' . $checkin_date . '","' . $checkout_date . '","' . $time . '",' . $selected_quantity . ',' . $amount . ',' . $order_date . ',' . $ticket_id . ',' . $security_code;
+    						$csv .= "\n";
+    					}
+				    }
 					return $csv;
 				}
 				/*********************************************************************
 				 * Add ticket ID and security code in the print headers
 				 ********************************************************************/
 				function bkap_printable_tickets_add_print_columns($print_data_columns) {
-					$print_data_columns = "
-					<tr>
-					<th style='border:1px solid black;padding:5px;'>".__('Order ID','woocommerce-booking')."</th>
-					<th style='border:1px solid black;padding:5px;'>".__('Customer Name','woocommerce-booking')."</th>
-					<th style='border:1px solid black;padding:5px;'>".__('Product Name','woocommerce-booking')."</th>
-					<th style='border:1px solid black;padding:5px;'>".__('Check-in Date','woocommerce-booking')."</th>
-					<th style='border:1px solid black;padding:5px;'>".__('Check-out Date','woocommerce-booking')."</th>
-					<th style='border:1px solid black;padding:5px;'>".__('Booking Time','woocommerce-booking')."</th>
-					<th style='border:1px solid black;padding:5px;'>".__('Quantity','woocommerce-booking')."</th>
-					<th style='border:1px solid black;padding:5px;'>".__('Amount','woocommerce-booking')."</th>
-					<th style='border:1px solid black;padding:5px;'>".__('Order Date','woocommerce-booking')."</th>
-					<th style='border:1px solid black;padding:5px;'>".__('Ticket ID','woocommerce-booking')."</th>
-					<th style='border:1px solid black;padding:5px;'>".__('Security Code','woocommerce-booking')."</th>
-					</tr>";
+				    
+				    if ( isset( $_REQUEST[ 'post_type' ] ) && $_REQUEST[ 'post_type' ] === $this->type ) {
+				    
+				        $print_data_columns = "
+				            <tr>
+                                <th style='border:1px solid black;padding:5px;'>".__( 'Status', 'woocommerce-booking' )."</th>
+                                <th style='border:1px solid black;padding:5px;'>".__( 'ID', 'woocommerce-booking' )."</th>
+                                <th style='border:1px solid black;padding:5px;'>".__( 'Booked Product', 'woocommerce-booking' )."</th>
+                                <th style='border:1px solid black;padding:5px;'>".__( 'Booked By', 'woocommerce-booking' )."</th>
+                                <th style='border:1px solid black;padding:5px;'>".__( 'Order', 'woocommerce-booking' )."</th>
+                                <th style='border:1px solid black;padding:5px;'>".__( 'Start Date', 'woocommerce-booking' )."</th>
+                                <th style='border:1px solid black;padding:5px;'>".__( 'End Date', 'woocommerce-booking' )."</th>
+                                <th style='border:1px solid black;padding:5px;'>".__( 'Quantity', 'woocommerce-booking' )."</th>
+                                <th style='border:1px solid black;padding:5px;'>".__( 'Amount', 'woocommerce-booking' )."</th>";
+				    
+				    } else {
+				    
+    					$print_data_columns = "
+    					<tr>
+        					<th style='border:1px solid black;padding:5px;'>".__('Order ID','woocommerce-booking')."</th>
+        					<th style='border:1px solid black;padding:5px;'>".__('Customer Name','woocommerce-booking')."</th>
+        					<th style='border:1px solid black;padding:5px;'>".__('Product Name','woocommerce-booking')."</th>
+        					<th style='border:1px solid black;padding:5px;'>".__('Check-in Date','woocommerce-booking')."</th>
+        					<th style='border:1px solid black;padding:5px;'>".__('Check-out Date','woocommerce-booking')."</th>
+        					<th style='border:1px solid black;padding:5px;'>".__('Booking Time','woocommerce-booking')."</th>
+        					<th style='border:1px solid black;padding:5px;'>".__('Quantity','woocommerce-booking')."</th>
+        					<th style='border:1px solid black;padding:5px;'>".__('Amount','woocommerce-booking')."</th>
+        					<th style='border:1px solid black;padding:5px;'>".__('Order Date','woocommerce-booking')."</th>";
+				    }
+				    
+				    $print_data_columns .= "
+						    <th style='border:1px solid black;padding:5px;'>".__('Ticket ID','woocommerce-booking')."</th>
+    					    <th style='border:1px solid black;padding:5px;'>".__('Security Code','woocommerce-booking')."</th>
+					   </tr>";
 					return $print_data_columns;
 				}
 				/**********************************************************************
@@ -1074,23 +1259,155 @@ function is_bkap_tickets_active() {
 				 *********************************************************************/
 				function bkap_printable_tickets_add_print_rows($print_data_row_data,$report) {
 					$print_data_row_data = '';
-					foreach ($report as $key => $value) {
-						$print_data_row_data .= "<tr>
-						<td style='border:1px solid black;padding:5px;'>".$value->order_id."</td>
-						<td style='border:1px solid black;padding:5px;'>".$value->customer_name."</td>
-						<td style='border:1px solid black;padding:5px;'>".$value->product_name."</td>
-						<td style='border:1px solid black;padding:5px;'>".$value->checkin_date."</td>
-						<td style='border:1px solid black;padding:5px;'>".$value->checkout_date."</td>
-						<td style='border:1px solid black;padding:5px;'>".$value->time."</td>
-						<td style='border:1px solid black;padding:5px;'>".$value->quantity."</td>
-						<td style='border:1px solid black;padding:5px;'>".$value->amount."</td>
-						<td style='border:1px solid black;padding:5px;'>".$value->order_date."</td>
-						<td style='border:1px solid black;padding:5px;'>".$value->ticket_id."</td>
-						<td style='border:1px solid black;padding:5px;'>".$value->security_code."</td>
-						</tr>";
-					}
+					
+					if ( isset( $_REQUEST[ 'post_type' ] ) && $_REQUEST[ 'post_type' ] === $this->type ) {
+					    
+					    foreach ( $report as $key => $value ) {
+					        // Status
+					        $status_raw = $value->get_status();
+					        $status = bkap_common::get_mapped_status( $status_raw );
+					    
+					        // Booked Product
+					        $product = $value->get_product();
+					        $product_name = "";
+					        if ( $product !== null ) {
+					            $product_name = $product->get_title();
+					        }
+					    
+					        // Booked By
+					        $customer = $value->get_customer();
+					        $booked_by = $customer->name;
+					    
+					        // Start Date
+					        $start_date = $value->get_start_date();
+					        if ( $value->get_start_time() !== '' ) {
+					            $start_date .= " - " . $value->get_start_time();
+					        }
+					    
+					        // End Date
+					        $end_date = "";
+					        if ( $value->get_end_date() !== '' ) {
+					            $end_date = $value->get_end_date();
+					    
+					            if ( $value->get_end_time() !== '' ) {
+					                $end_date .= " - " . $value->get_end_time();
+					            }
+					        }
+					    
+					        // Amount
+					        $amount = $value->get_cost();
+					        $final_amt = $amount * $value->get_quantity();
+					    
+					        if ( absint( $value->order_id ) > 0 && false !== get_post_status( $value->order_id ) ) {
+					            $the_order = wc_get_order( $value->order_id );
+					            $currency = ( version_compare( WOOCOMMERCE_VERSION, "3.0.0" ) < 0 ) ? $the_order->get_order_currency() : $the_order->get_currency();
+					        } else {
+					            // get default woocommerce currency
+					            $currency = get_woocommerce_currency();
+					        }
+					        $currency_symbol = get_woocommerce_currency_symbol( $currency );
+					    
+					        $final_amt = html_entity_decode( $currency_symbol ) . " " . $final_amt;
+					    
+					        // ticket ID
+					        $ticket_array = get_post_meta( $value->id, '_bkap_ticket_id', true );
+					        $ticket_ids = ( is_array( $ticket_array ) ) ? implode( '<br>', $ticket_array ) : '';
+					    
+					        // security code
+					        $security_array = get_post_meta( $value->id, '_bkap_security_code', true );
+					        $security_codes = is_array( $security_array ) ? implode( '<br>', $security_array ) : '';
+					    
+					        $print_data_row_data .= "<tr>
+                                                <td style='border:1px solid black;padding:5px;'>".$status."</td>
+                                                <td style='border:1px solid black;padding:5px;'>".$value->id."</td>
+                                                <td style='border:1px solid black;padding:5px;'>".$product_name."</td>
+                                                <td style='border:1px solid black;padding:5px;'>".$booked_by."</td>
+                                                <td style='border:1px solid black;padding:5px;'>".$value->order_id."</td>
+                                                <td style='border:1px solid black;padding:5px;'>".$start_date."</td>
+                                                <td style='border:1px solid black;padding:5px;'>".$end_date."</td>
+                                                <td style='border:1px solid black;padding:5px;'>".$value->get_quantity()."</td>
+                                                <td style='border:1px solid black;padding:5px;'>".$final_amt."</td>
+				                                <td style='border:1px solid black;padding:5px;'>".$ticket_ids."</td>
+					                            <td style='border:1px solid black;padding:5px;'>".$security_codes."</td>
+                                                </tr>";
+					    }
+					    
+				    } else {
+    					foreach ($report as $key => $value) {
+    						$print_data_row_data .= "<tr>
+    						<td style='border:1px solid black;padding:5px;'>".$value->order_id."</td>
+    						<td style='border:1px solid black;padding:5px;'>".$value->customer_name."</td>
+    						<td style='border:1px solid black;padding:5px;'>".$value->product_name."</td>
+    						<td style='border:1px solid black;padding:5px;'>".$value->checkin_date."</td>
+    						<td style='border:1px solid black;padding:5px;'>".$value->checkout_date."</td>
+    						<td style='border:1px solid black;padding:5px;'>".$value->time."</td>
+    						<td style='border:1px solid black;padding:5px;'>".$value->quantity."</td>
+    						<td style='border:1px solid black;padding:5px;'>".$value->amount."</td>
+    						<td style='border:1px solid black;padding:5px;'>".$value->order_date."</td>
+    						<td style='border:1px solid black;padding:5px;'>".$value->ticket_id."</td>
+    						<td style='border:1px solid black;padding:5px;'>".$value->security_code."</td>
+    						</tr>";
+    					}
+				    }
 					return $print_data_row_data;
 				}
+				
+				/**
+				 * Add columns on the View Bookings page
+				 * @param array $existing_columns
+				 * @return multitype:
+				 * @since 1.7
+				 */
+				function bkap_printable_edit_columns( $existing_columns ) {
+				
+				    global $post_type;
+				
+				    if ( $post_type === $this->type ) {
+				         
+				        $columns                    = array();
+				        $columns["bkap_ticket_id"]     = __( 'Ticket ID', 'woocommerce-booking' );
+				        $columns["bkap_security_code"] = __( 'Security Code', 'woocommerce-booking' );
+				        	
+				        return array_merge( $existing_columns, $columns );
+				    }
+				}
+				
+				/**
+				 * Adds column data
+				 * @param str $column
+				 * @since 1.7
+				 */
+				function bkap_printable_custom_columns( $column ) {
+				
+				    global $wpdb, $post;
+				     
+				    if ( get_post_type( $post->ID ) === $this->type ) {
+				
+				        $booking_id = $post->ID;
+				        switch ( $column ) {
+				            case 'bkap_ticket_id' :
+				                $ticket_list = '';
+				                $tickets = get_post_meta( $booking_id, '_bkap_ticket_id', true );
+				                if ( is_array( $tickets ) && count( $tickets ) > 0 )
+				                    $ticket_list = implode( '<br>', $tickets );
+				
+				                echo $ticket_list;
+				                break;
+				            case 'bkap_security_code' :
+				                $code_list =
+				                $codes = get_post_meta( $booking_id, '_bkap_security_code', true );
+				
+				                if ( is_array( $codes ) && count( $codes ) > 0 )
+				                    $code_list = implode( '<br>', $codes );
+				                 
+				                echo $code_list;
+				                break;
+				        }
+				         
+				    }
+				     
+				}
+				
 			}
 		}
 			
