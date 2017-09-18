@@ -305,7 +305,7 @@ function bkap_get_post_count() {
     
     $count = count( $booking_posts );
     
-    $number_of_batches = $count/500;
+    $number_of_batches = ceil( $count/500 );
     wp_reset_postdata();
     return $number_of_batches; 
 }
