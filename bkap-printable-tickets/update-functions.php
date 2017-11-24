@@ -10,7 +10,7 @@ function printable_17_update_notice() {
 
     $valid_statuses = array( 'fail', 'success' );
     $_status = get_option( 'printable_17_db_status' );
-    if ( $plugin_version == '1.7' && ! in_array( $_status, $valid_statuses ) ) {
+    if ( $plugin_version == '1.8' && ! in_array( $_status, $valid_statuses ) ) {
 
         $class = 'notice notice-error';
         $class .= ' is-dismissible';
