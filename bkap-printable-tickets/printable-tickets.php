@@ -1,4 +1,4 @@
-<?php 
+<?php
 /**
  * Plugin Name: Printable Tickets Addon
  * Plugin URI: https://www.tychesoftwares.com/store/premium-plugins/printable-tickets-addon-woocommerce-booking-appointment-plugin/
@@ -294,7 +294,7 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 
 					<table class="form-table">
 						<tbody>
-							<tr valign="top">	
+							<tr valign="top">
 								<th scope="row" valign="top">
 									<?php _e('License Key'); ?>
 								</th>
@@ -304,7 +304,7 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 								</td>
 							</tr>
 							<?php if( false !== $license ) { ?>
-								<tr valign="top">	
+								<tr valign="top">
 									<th scope="row" valign="top">
 										<?php _e('Activate License'); ?>
 									</th>
@@ -321,7 +321,7 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 								</tr>
 							<?php } ?>
 						</tbody>
-					</table>	
+					</table>
 					<?php submit_button(); ?>
 				</form>
 			<?php
@@ -375,11 +375,11 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 					<?php do_action( 'printable_notes' );?>
 					<form method="post" action="options.php">
 					<?php settings_fields( 'bkap_printable_tickets_settings' ); ?>
-					<?php do_settings_sections( 'woocommerce_booking_page-bkap_printable_tickets_settings_section' ); ?> 
+					<?php do_settings_sections( 'woocommerce_booking_page-bkap_printable_tickets_settings_section' ); ?>
 					<?php submit_button(); ?>
 					</form>
 				</div>
-				<?php 
+				<?php
 			}
 		}
 
@@ -461,7 +461,7 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 			?>
 			<p><label><input type="radio" name="booking_send_ticket_method" id="booking_send_ticket_method" value="send_by_quantity" <?php echo $send_individually; ?>/><?php _e( 'Send 1 ticket per quantity&nbsp&nbsp&nbsp&nbsp&nbsp;', 'printable-tickets' ) ;?></label>
 			<label><input type="radio" name="booking_send_ticket_method" id="booking_send_ticket_method" value="send_by_product" <?php echo $send_by_order; ?>/><?php _e( 'Send 1 ticket per product', 'printable-tickets' ) ;?></label></p>
-			<?php 
+			<?php
 			$html = '<label for="booking_send_ticket_method"> ' . $args[ 0 ] . '</label>';
 			echo $html;
 		}
@@ -612,9 +612,9 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 		 */
 		public function bkap_send_ticket_content( $values,$order ) {
 			global $wpdb;
-			
+
 			$ticket = array();
-			
+
 			$order_status = ( version_compare( WOOCOMMERCE_VERSION, "3.0.0" ) < 0 ) ? $order->status : $order->get_status();
 			if ( $order_status == 'completed' ) {
 				$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
@@ -635,35 +635,41 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 						$post_id = $values['product_id'];
 						$headers_email[] = "From:".$from_email;
 						$headers_email[] = "Content-type: text/html";
-						
+
 						$order_id = ( version_compare( WOOCOMMERCE_VERSION, "3.0.0" ) < 0 ) ? $order->id : $order->get_id();
-						
+
 						// get the booking post ID
 						$item_id = ( isset( $values[ 'item_id' ] ) ) ? $values[ 'item_id' ] : 0;
-						
+
 						if( $item_id > 0 ) {
 							$bkap_post_id = bkap_common::get_booking_id( $item_id );
-							
+
 							if ( version_compare( WOOCOMMERCE_VERSION, "3.0.0" ) < 0 ) {
 								$completed_date = date('F j, Y',strtotime($order->completed_date));
 							} else {
-								$order_post = get_post( $order_id );
-								$post_date = strtotime ( $order_post->post_date );
-								$completed_date = date( 'F d, Y', $post_date );
+								if ( bkap_wc_hpos_enabled() ) {
+									$order          = wc_get_order( $order_id );
+									$order_date     = strtotime( $order->get_date_created() );
+									$completed_date = date( 'F d, Y', $order_date );
+								} else {
+									$order_post     = get_post( $order_id );
+									$post_date      = strtotime( $order_post->post_date );
+									$completed_date = date( 'F d, Y', $post_date );
+								}
 							}
-							
+
 							$subject = "Your Ticket for Order #".$order_id." from ".$completed_date;
-							
+
 							$logo = get_header_image();
 							$message = '';
 							$booking = '';
 							$addon = '';
 							$site_url = get_site_url();
 							$site_title = get_option('blogname');
-							$site_tagline = get_option('blogdescription'); 
+							$site_tagline = get_option('blogdescription');
 							if(array_key_exists('bkap_booking',$values) ) {
 								$bookings = $values['bkap_booking'];
-										
+
 								if (array_key_exists('date',$bookings[0]) && $bookings[0]['date'] != "") {
 									$booking_date = date('d F, Y',strtotime($bookings[0]["hidden_date"]));
 							$booking = get_option("book_item-meta-date").': '.$booking_date.'<br>';
@@ -678,19 +684,19 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 								$hidden_date = $bookings[0]['hidden_date'];
 								$date_query = date('Y-m-d', strtotime($hidden_date));
 								$booking_id = array();
-								
+
 								$booking_id_query = "SELECT booking_id FROM `".$wpdb->prefix."booking_order_history`
 														WHERE order_id = %d";
 								$booking_id_results = $wpdb->get_results($wpdb->prepare($booking_id_query,$order_id));
-								// This is to figure out for which Item in the order are tickets to be created for.	
+								// This is to figure out for which Item in the order are tickets to be created for.
 								foreach ($booking_id_results as $k => $v) {
-									
+
 									$booking_id_to_use_query = "SELECT id FROM `".$wpdb->prefix."booking_history`
 																WHERE id = %d
 																AND post_id = %d";
-							
+
 									$booking_id_to_use = $wpdb->get_results($wpdb->prepare($booking_id_to_use_query,$v->booking_id,$product_id));
-								
+
 									if (count($booking_id_to_use) > 0) {
 										break;
 									}
@@ -708,17 +714,17 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 									}
 								}
 							}
-						
+
 							$f = 0;
 							if(is_plugin_active('woocommerce-product-addons/product-addons.php')) {
 								$addons = $values['addons'];
 								foreach($addons as $key ) {
 									$addon .= $addons[$f]["name"].': '.$addons[$f]["value"].'<br>';
-									$f++;		
+									$f++;
 								}
 							}
 							$instructions = get_post_meta($values['product_id'],'instructions');
-						
+
 							if( get_option( 'booking_send_ticket_method' ) == 'send_by_quantity') {
 								$quantity = $values['quantity'];
 								foreach($booking_id_to_use as $b_key => $b_val) {
@@ -726,10 +732,10 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 										$ticket_data = $this->create_ticket_details();
 										$ticket_no = $ticket_data[ 'ticket_id' ];
 										$security_unique_no = $ticket_data[ 'security_code' ];
-					
+
 										//get the content
 										$message .= $this->get_template();
-											
+
 										$message = str_replace( '{{site_title}}', $site_title, $message );
 										$message = str_replace( '{{site_tagline}}', $site_tagline, $message );
 										$message = str_replace( '{{product_name}}', $product_name, $message );
@@ -744,7 +750,7 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 										$message = str_replace( '{{headings_security_code}}', $this->headings[ "security_code" ], $message );
 										$message = str_replace( '{{security_unique_no}}', $security_unique_no, $message );
 										$message = str_replace( '{{site_url}}', $site_url, $message );
-																	
+
 										$query_ticket= "INSERT INTO `".$wpdb->prefix."booking_item_meta`
 														(order_id,booking_id,booking_meta_key,booking_meta_value)
 														VALUES (
@@ -761,26 +767,26 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 														'_security_code',
 														'".$security_unique_no."')";
 										$wpdb->query($query_security_code );
-										
+
 										// check if a record is already present
 										$existing_ticket = get_post_meta( $bkap_post_id, '_bkap_ticket_id', true );
-										
+
 										if ( is_array( $existing_ticket ) && count( $existing_ticket ) > 0 ) {
 											if ( ! in_array( $ticket_no, $existing_ticket ) )
 												array_push( $existing_ticket, $ticket_no );
 										} else {
 											$existing_ticket = array( $ticket_no );
 										}
-										
+
 										$existing_codes = get_post_meta( $bkap_post_id, '_bkap_security_code', true );
-										
+
 										if( is_array( $existing_codes ) && count( $existing_codes ) > 0 ) {
 											if ( ! in_array( $security_unique_no, $existing_codes ) )
 												array_push( $existing_codes, $security_unique_no );
 										} else {
 											$existing_codes = array( $security_unique_no );
 										}
-										
+
 										update_post_meta( $bkap_post_id, '_bkap_ticket_id', $existing_ticket );
 										update_post_meta( $bkap_post_id, '_bkap_security_code', $existing_codes );
 									}
@@ -789,13 +795,13 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 								$ticket_data = $this->create_ticket_details();
 								$ticket_no = $ticket_data[ 'ticket_id' ];
 								$security_unique_no = $ticket_data[ 'security_code' ];
-							
+
 								//get the content
 								$message = $this->get_template();
-								
+
 								$message = str_replace( '{{site_title}}', $site_title, $message );
 								$message = str_replace( '{{site_tagline}}', $site_tagline, $message );
-								$message = str_replace( '{{product_name}}', $product_name, $message ); 
+								$message = str_replace( '{{product_name}}', $product_name, $message );
 								$message = str_replace( '{{heading_ticket_number}}', $this->headings[ "ticket_number" ], $message );
 								$message = str_replace( '{{ticket_no}}', $ticket_no, $message );
 								$message = str_replace( '{{headings_booking_details}}', $this->headings[ "booking_details" ], $message );
@@ -827,26 +833,26 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 									$wpdb->query(  $query_security_code );
 									$j++;
 								}
-								
+
 								// check if a record is already present
 								$existing_ticket = get_post_meta( $bkap_post_id, '_bkap_ticket_id', true );
-									
+
 								if ( is_array( $existing_ticket ) && count( $existing_ticket ) > 0 ) {
 									if ( ! in_array( $ticket_no, $existing_ticket ) )
 										array_push( $existing_ticket, $ticket_no );
 								} else {
 									$existing_ticket = array( $ticket_no );
 								}
-									
+
 								$existing_codes = get_post_meta( $bkap_post_id, '_bkap_security_code', true );
-									
+
 								if( is_array( $existing_codes ) && count( $existing_codes ) > 0 ) {
 									if ( ! in_array( $security_unique_no, $existing_codes ) )
 										array_push( $existing_codes, $security_unique_no );
 								} else {
 									$existing_codes = array( $security_unique_no );
 								}
-									
+
 								update_post_meta( $bkap_post_id, '_bkap_ticket_id', $existing_ticket );
 								update_post_meta( $bkap_post_id, '_bkap_security_code', $existing_codes );
 							}
@@ -855,7 +861,7 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 					}
 				}
 			}
-			
+
 			return $ticket;
 		}
 
@@ -865,29 +871,29 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 		 * @since 1.7
 		 */
 		public function create_ticket_details() {
-		
+
 			global $wpdb;
-		
+
 			$last_count = get_option( '_bkap_last_ticket_id' );
-		
+
 			if ( isset( $last_count ) && is_numeric( $last_count ) ) {
 			} else {
-		
+
 				$ticket_sql = "SELECT MAX(CAST(booking_meta_value AS unsigned)) AS ticket_id FROM `".$wpdb->prefix."booking_item_meta` WHERE booking_meta_key = '_ticket_id'";
-					
+
 				$ticket_results = $wpdb->get_results($ticket_sql);
 				$last_count = $ticket_results[0]->ticket_id;
 				if($last_count == '') {
 					$last_count = 1;
 				}
-					
+
 			}
 			$ticket_no = $last_count + 1;
-		
+
 			$security_unique_no = $this->get_rand_id(10);
-		
+
 			update_option( '_bkap_last_ticket_id', $ticket_no );
-		
+
 			return array( 'ticket_id' => $ticket_no,
 				'security_code' => $security_unique_no
 			);
@@ -898,7 +904,7 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 		 * @since 1.0
 		 */
 		public function get_template() {
-		
+
 			ob_start();
 			wc_get_template( 'printable-ticket-email-template.php',array(),'bkap-printable-tickets/', dirname( __FILE__ ).'/templates/' );
 			return ob_get_clean();
@@ -941,11 +947,11 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 			$saved_settings = json_decode(get_option('woocommerce_booking_global_settings'));
 			$message = '';
 			if ( get_option( 'booking_printable_ticket' ) == 'on' ) {
-				$order_obj = new WC_order($order_id);
+				$order_obj   = wc_get_order($order_id);
 				$order_items = $order_obj->get_items();
-				
+
 				$ticket_content = array();
-				foreach($order_items as $item_key => $item_value) {	
+				foreach($order_items as $item_key => $item_value) {
 					$values = array();
 					$hidden_date = '';
 					$hidden_date_checkout = '';
@@ -955,15 +961,15 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 						$quantity = $item_value['qty'];
 						$product_id = $item_value[ 'product_id' ];
 						$product_name = $item_value['name'];
-					
+
 						if (array_key_exists(get_option("book_item-meta-date"),$item_value) &&  $item_value[get_option("book_item-meta-date")] != "") {
 							$date = $item_value[get_option("book_item-meta-date")];
 						}
-			
+
 						if (array_key_exists( get_option( "checkout_item-meta-date" ),$item_value ) && $item_value[get_option("checkout_item-meta-date")] != "") {
 							$date_checkout = $item_value[get_option("checkout_item-meta-date")];
 						}
-						
+
 						if (array_key_exists(get_option("book_item-meta-time"),$item_value) && $item_value[get_option("book_item-meta-time")] != "") {
 							$time_slot = $item_value[get_option("book_item-meta-time")];
 						}
@@ -989,17 +995,17 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 							}
 						}
 					} else { // Woo 3.0.0
-							
+
 						$quantity = $item_value->get_quantity();
 						$product_id = $item_value->get_product_id();
 						$product_name = $item_value->get_name();
-							
+
 						$start_date_label = get_option( "book_item-meta-date" );
 						$end_date_label = get_option( "checkout_item-meta-date" );
 						$time_slot_label = get_option( "book_item-meta-time" );
-							
+
 						$item_meta = $item_value->get_meta_data();
-							
+
 						$comment = '';
 						if (function_exists('is_bkap_tours_active') && is_bkap_tours_active()) {
 							$comment = bkap_get_book_t('book.item-comments');
@@ -1024,16 +1030,16 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 							}
 						}
 					}
-						
+
 					// Populate $values
 					$values[ 'item_id' ] = $item_key;
 					$values['quantity'] = $quantity;
-						
+
 					$duplicate_of = bkap_common::bkap_get_product_id( $product_id );
 					$values['product_id'] = $duplicate_of;
-						
+
 					$values['name'] = $product_name;
-						
+
 					if ( isset( $date ) && '' != $date ) {
 						$date_format_set = $bkap_date_formats[ $saved_settings->booking_date_format ];
 						$date_formatted = date_create_from_format( $date_format_set, $date );
@@ -1043,7 +1049,7 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 						$values['bkap_booking'][0]['date'] = $date;
 						$values['bkap_booking'][0]['hidden_date'] = $hidden_date;
 					}
-						
+
 					if ( isset( $date_checkout ) && '' != $date_checkout ) {
 						$date_format_set = $bkap_date_formats[ $saved_settings->booking_date_format ];
 						$date_formatted = date_create_from_format( $date_format_set, $date_checkout );
@@ -1053,18 +1059,18 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 						$values[ 'bkap_booking' ][0][ 'date_checkout'] = $date_checkout;
 						$values[ 'bkap_booking' ][0][ 'hidden_date_checkout' ] = $hidden_date_checkout;
 					}
-						
+
 					if ( isset( $time_slot ) && '' != $time_slot ) {
 						$values['bkap_booking'][0]['time_slot'] = $time_slot;
 					}
-						
+
 					if ( isset( $tour_comments ) ) {
 						$values['bkap_booking'][0]['comments'] = $tour_comments;
 					}
 					$ticket = array(apply_filters('bkap_send_ticket',$values,$order_obj));
 					$ticket_content = array_merge($ticket_content,$ticket);
 				}
-				
+
 				$i = 0;
 				$send_ticket = 'Y';
 				foreach($ticket_content as $key => $value) {
@@ -1107,11 +1113,11 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 			// ticket ID
 			$ticket_array = get_post_meta( $booking_id, '_bkap_ticket_id', true );
 			$ticket_ids = ( is_array( $ticket_array ) ) ? implode( ',', $ticket_array ) : '';
-				
+
 			// security code
 			$security_array = get_post_meta( $booking_id, '_bkap_security_code', true );
 			$security_codes = is_array( $security_array ) ? implode( ',', $security_array ) : '';
-				
+
 			// Create the data row
 			$csv .= ',"' . $ticket_ids . '","' . $security_codes . '"';
 
@@ -1128,7 +1134,7 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 			// ticket ID
 			$ticket_array = get_post_meta( $booking_id, '_bkap_ticket_id', true );
 			$ticket_ids = ( is_array( $ticket_array ) ) ? implode( '<br>', $ticket_array ) : '';
-		
+
 			// security code
 			$security_array = get_post_meta( $booking_id, '_bkap_security_code', true );
 			$security_codes = is_array( $security_array ) ? implode( '<br>', $security_array ) : '';
@@ -1138,7 +1144,7 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 
 			return $print_data_row_data;
 		}
-		
+
 		/**
 		 * Add columns on the View Bookings page.
 		 * @param array $existing_columns
@@ -1146,30 +1152,30 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 		 * @since 1.7
 		 */
 		public function bkap_printable_edit_columns( $existing_columns ) {
-		
+
 			global $post_type;
-		
+
 			if ( $post_type === $this->type ) {
-					
+
 				$columns                       = array();
 				$columns["bkap_ticket_id"]     = __( 'Ticket ID', 'woocommerce-booking' );
 				$columns["bkap_security_code"] = __( 'Security Code', 'woocommerce-booking' );
-					
+
 				return array_merge( $existing_columns, $columns );
 			}
 		}
-		
+
 		/**
 		 * Adds column data.
 		 * @param str $column
 		 * @since 1.7
 		 */
 		public function bkap_printable_custom_columns( $column ) {
-		
+
 			global $wpdb, $post;
-				
+
 			if ( get_post_type( $post->ID ) === $this->type ) {
-		
+
 				$booking_id = $post->ID;
 				switch ( $column ) {
 					case 'bkap_ticket_id' :
@@ -1177,19 +1183,19 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 						$tickets = get_post_meta( $booking_id, '_bkap_ticket_id', true );
 						if ( is_array( $tickets ) && count( $tickets ) > 0 )
 							$ticket_list = implode( '<br>', $tickets );
-		
+
 						echo $ticket_list;
 						break;
 					case 'bkap_security_code' :
 						$code_list =
 						$codes = get_post_meta( $booking_id, '_bkap_security_code', true );
-		
+
 						if ( is_array( $codes ) && count( $codes ) > 0 )
 							$code_list = implode( '<br>', $codes );
-							
+
 						echo $code_list;
 						break;
-				}	
+				}
 			}
 		}
 	}
