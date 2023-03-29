@@ -11,7 +11,7 @@
  */
 
 // this is the URL our updater / license checker pings. This should be the URL of the site with EDD installed.
-define( 'EDD_SL_STORE_URL_PRINT_TICKET_BOOK', 'http://www.tychesoftwares.com/' ); // IMPORTANT: change the name of this constant to something unique to prevent conflicts with other plugins using this system.
+define( 'EDD_SL_STORE_URL_PRINT_TICKET_BOOK', 'https://www.tychesoftwares.com/' ); // IMPORTANT: change the name of this constant to something unique to prevent conflicts with other plugins using this system.
 
 // the name of your product. This is the title of your product in EDD and should match the download title in EDD exactly.
 define( 'EDD_SL_ITEM_NAME_PRINT_TICKET_BOOK', 'Printable Tickets Addon for WooCommerce Booking & Appointment Plugin' ); // IMPORTANT: change the name of this constant to something unique to prevent conflicts with other plugins using this system.
