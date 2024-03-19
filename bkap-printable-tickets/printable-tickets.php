@@ -1070,6 +1070,23 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 			$cols['ticket_id'] = __( 'Ticket ID', 'woocommerce-booking' );
 			$cols['security_code'] = __( 'Security Code', 'woocommerce-booking' );
 
+			$user_id = get_current_user_id();
+			if ( ! empty( $user_id ) ) {
+				$h_cols = get_user_meta( $user_id, 'manageedit-bkap_bookingcolumnshidden', true );
+				if ( ! empty( $h_cols ) ) {
+					foreach ( $h_cols as $column ) {
+						switch ( $column ) {
+							case 'bkap_ticket_id':
+								unset( $cols['ticket_id'] );
+								break;
+							case 'bkap_security_code':
+								unset( $cols['security_code'] );
+								break;
+						}
+					}
+				}
+			}
+
 			return $cols;
 		}
 
@@ -1080,16 +1097,21 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 		 */
 		public function bkap_printable_csv_data( $csv, $booking, $booking_id ) {
 
-			// ticket ID
-			$ticket_array = get_post_meta( $booking_id, '_bkap_ticket_id', true );
-			$ticket_ids = ( is_array( $ticket_array ) ) ? implode( ',', $ticket_array ) : '';
+			$columns = BKAP_Admin_API_View_Bookings::bkap_get_csv_cols();
 
-			// security code
-			$security_array = get_post_meta( $booking_id, '_bkap_security_code', true );
-			$security_codes = is_array( $security_array ) ? implode( ',', $security_array ) : '';
+			if ( isset( $columns['ticket_id'] ) ) {
+				// ticket ID
+				$ticket_array = get_post_meta( $booking_id, '_bkap_ticket_id', true );
+				$ticket_ids   = ( is_array( $ticket_array ) ) ? implode( ',', $ticket_array ) : '';
+				$csv         .= ',"' . $ticket_ids . '"';
+			}
 
-			// Create the data row
-			$csv .= ',"' . $ticket_ids . '","' . $security_codes . '"';
+			if ( isset( $columns['security_code'] ) ) {
+				// security code
+				$security_array = get_post_meta( $booking_id, '_bkap_security_code', true );
+				$security_codes = is_array( $security_array ) ? implode( ',', $security_array ) : '';
+				$csv           .= ',"' . $security_codes . '"';
+			}
 
 			return $csv;
 		}
@@ -1101,16 +1123,21 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 		 */
 		public function bkap_print_individual_row( $print_data_row_data, $booking, $booking_id ) {
 
-			// ticket ID
-			$ticket_array = get_post_meta( $booking_id, '_bkap_ticket_id', true );
-			$ticket_ids = ( is_array( $ticket_array ) ) ? implode( '<br>', $ticket_array ) : '';
+			$columns = BKAP_Admin_API_View_Bookings::bkap_get_csv_cols();
 
-			// security code
-			$security_array = get_post_meta( $booking_id, '_bkap_security_code', true );
-			$security_codes = is_array( $security_array ) ? implode( '<br>', $security_array ) : '';
-
-			$print_data_row_data .= '<td style="border:1px solid black;padding:5px;">' . $ticket_ids . '</td>';
-			$print_data_row_data .= '<td style="border:1px solid black;padding:5px;">' . $security_codes . '</td>';
+			if ( isset( $columns['ticket_id'] ) ) {
+				// ticket ID.
+				$ticket_array         = get_post_meta( $booking_id, '_bkap_ticket_id', true );
+				$ticket_ids           = ( is_array( $ticket_array ) ) ? implode( '<br>', $ticket_array ) : '';
+				$print_data_row_data .= '<td style="border:1px solid black;padding:5px;">' . $ticket_ids . '</td>';
+			}
+			
+			if ( isset( $columns['security_code'] ) ) {
+				// security code.
+				$security_array       = get_post_meta( $booking_id, '_bkap_security_code', true );
+				$security_codes       = is_array( $security_array ) ? implode( '<br>', $security_array ) : '';
+				$print_data_row_data .= '<td style="border:1px solid black;padding:5px;">' . $security_codes . '</td>';
+			}
 
 			return $print_data_row_data;
 		}
