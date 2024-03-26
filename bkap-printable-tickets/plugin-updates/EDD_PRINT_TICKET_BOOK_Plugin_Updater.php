@@ -14,6 +14,7 @@ class EDD_PRINT_TICKET_BOOK_Plugin_Updater {
 	private $api_data = array();
 	private $name     = 'Printable Tickets Addon for WooCommerce Booking & Appointment Plugin';
 	private $slug     = 'printable_ticket';
+	private $version  = '';
 
 	/**
 	 * Class constructor.

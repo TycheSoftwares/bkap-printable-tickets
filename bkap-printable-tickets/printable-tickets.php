@@ -75,6 +75,24 @@ if ( ! class_exists( 'BKAP_Printable_Tickets' ) ) {
 	class BKAP_Printable_Tickets {
 
 		/**
+		 * The unique identifier of this plugin.
+		 *
+		 * @since  1.0.0
+		 * @access protected
+		 * @var    string $type Booking Post Type.
+		 */
+		protected $type;
+
+		/**
+		 * The unique identifier of this plugin.
+		 *
+		 * @since  1.0.0
+		 * @access protected
+		 * @var    array $headings Heading of Printable Ticket Template email.
+		 */
+		protected $headings;
+
+		/**
 		 * Constructor.
 		 */
 		public function __construct() {
