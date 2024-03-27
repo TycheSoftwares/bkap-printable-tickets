@@ -1,11 +1,14 @@
 <?php
 /**
  * Plugin Name: Printable Tickets Addon
- * Plugin URI: https://www.tychesoftwares.com/store/premium-plugins/printable-tickets-addon-woocommerce-booking-appointment-plugin/
+ * Plugin URI: https://www.tychesoftwares.com/products/woocommerce-booking-appointment-plugin/printable-tickets-addon/
  * Description: This is an addon for the WooCommerce Booking & Appointment Plugin which allows you to email the tickets for the bookings to customers when an order is placed.
- * Version: 1.10
+ * Version: 2.0
  * Author: Tyche Softwares
  * Author URI: http://www.tychesoftwares.com/
+ * Requires PHP: 7.2
+ * WC requires at least: 3.0.0
+ * WC tested up to: 8.7.0
  *
  * @package BKAP_Printable_Tickets
  */
@@ -29,7 +32,7 @@ $edd_updater = new EDD_PRINT_TICKET_BOOK_Plugin_Updater(
 	EDD_SL_STORE_URL_PRINT_TICKET_BOOK,
 	__FILE__,
 	array(
-		'version'   => '1.10', // current version number.
+		'version'   => '2.0', // current version number.
 		'license'   => $license_key, // license key (used get_option above to retrieve from DB).
 		'item_name' => EDD_SL_ITEM_NAME_PRINT_TICKET_BOOK, 	// name of this plugin.
 		'author'    => 'Ashok Rane', // author of this plugin.
