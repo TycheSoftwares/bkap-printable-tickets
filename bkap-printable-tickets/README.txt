@@ -23,5 +23,8 @@ This is an addon for the WooCommerce Booking & Appointment Plugin which allows y
 
 == Changelog ==
 
-= 1.10.0 =
+= 2.0 =
+* Compatiblity with Booking Plugin v6.0.0.
+
+= 1.10 =
 * HPOS Compatibility.
